@@ -27,6 +27,7 @@ interface BuildAppOptions {
   dataDir?: string;
   generator?: ProjectGenerator;
   logger?: boolean;
+  streamHeartbeatMs?: number;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -45,6 +46,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await store.init();
   const generator = options.generator ?? createProjectGenerator(config);
   const generationService = new GenerationService(store, generator);
+  const streamHeartbeatMs = options.streamHeartbeatMs ?? 15_000;
 
   await app.register(cors, {
     origin(origin, callback) {
@@ -118,6 +120,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       }
     };
 
+    const heartbeat = setInterval(() => {
+      void writeEvent({ type: 'HEARTBEAT', data: {}, timestamp: Date.now() });
+    }, streamHeartbeatMs);
+    heartbeat.unref();
+
     try {
       await generationService.generate(body.contract_id, instruction, writeEvent);
     } catch (error) {
@@ -132,6 +139,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         timestamp: Date.now(),
       });
     } finally {
+      clearInterval(heartbeat);
       if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
     }
   });

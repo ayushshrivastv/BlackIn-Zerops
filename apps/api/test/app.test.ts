@@ -5,6 +5,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { DemoProjectGenerator } from '../src/generation/demo-generator.js';
+import type { ProjectGenerator } from '../src/types.js';
 
 describe('generation API', () => {
   let app: FastifyInstance;
@@ -76,5 +77,40 @@ describe('generation API', () => {
 
     const deleted = await app.inject({ method: 'DELETE', url: '/api/v1/contracts/delete-me' });
     expect(deleted.json<{ success: boolean }>().success).toBe(true);
+  });
+
+  it('keeps slow generation streams active with heartbeat events', async () => {
+    await app.close();
+    const slowGenerator: ProjectGenerator = {
+      provider: 'test',
+      model: 'slow-generator',
+      async generate() {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return {
+          title: 'Heartbeat project',
+          description: 'A project generated after a slow model response.',
+          summary: 'Generation completed.',
+          provider: 'test',
+          model: 'slow-generator',
+          files: [{ path: 'package.json', content: '{"scripts":{"build":"next build"}}' }],
+        };
+      },
+    };
+    app = await buildApp({ dataDir, generator: slowGenerator, logger: false, streamHeartbeatMs: 5 });
+    await app.ready();
+
+    const generation = await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: { contract_id: 'slow-project', instruction: 'Build a slow project' },
+    });
+    const eventTypes = generation.body
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => (JSON.parse(line) as { type: string }).type);
+
+    expect(eventTypes).toContain('HEARTBEAT');
+    expect(eventTypes.at(-1)).toBe('END');
   });
 });
