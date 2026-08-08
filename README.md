@@ -1,90 +1,183 @@
-# BlackIn Studio Frontend
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/icons/blackin-wordmark-light.svg">
+    <source media="(prefers-color-scheme: light)" srcset="apps/web/public/icons/blackin-wordmark-dark.svg">
+    <img src="apps/web/public/icons/blackin-wordmark-dark.svg" alt="BlackIn" width="240">
+  </picture>
+</p>
 
-## Project Description
+<h1 align="center">BlackIn Studio</h1>
 
-BlackIn Studio is an agentic AI powered Web2 app builder. It turns one plain-English product prompt into an editable, downloadable project with screens, components, API routes, file structure, and deployment configuration.
+<p align="center">
+  <strong>Build complete Web2 applications from a single prompt.</strong>
+</p>
 
-## BlackIn Studio - Agentic Web App Builder
+<p align="center">
+  <a href="https://web-2ad8-3000.prg1.zerops.app/">Open BlackIn</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://github.com/ayushshrivastv/BlackIn-Zerops">Source</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://docs.zerops.io/">Zerops</a>
+</p>
 
-Builders can describe a SaaS dashboard, customer portal, admin panel, landing page, booking flow, or internal tool and immediately review the generated project files. The browser provides the workspace while the local Node.js backend runs the generation agent, streams progress, and persists projects without an AWS dependency.
+<p align="center">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=nextdotjs">
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-20-339933?style=flat-square&logo=nodedotjs&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Zerops" src="https://img.shields.io/badge/Infrastructure-Zerops-2CC5BD?style=flat-square">
+</p>
 
-Building a Web2 MVP today still requires moving between product notes, UI design, boilerplate setup, routing, forms, API boundaries, state handling, and deployment configuration. That setup can consume the first day of a hackathon before the product experience exists.
+## About
 
-BlackIn compresses that loop. You open the app, describe the product in plain language, and the AI plans the application, generates the frontend, prepares route and API structure, and keeps the result visible in a browser workspace with chat, file tree, code editor, and terminal.
+BlackIn Studio is an AI application development platform that turns a product requirement into a structured, editable project. Describe a SaaS product, customer portal, operations dashboard, booking flow, landing page, or internal tool, and BlackIn creates the application while streaming progress into a live development workspace.
 
-After initial generation, the project can be refined through chat in the same workspace by asking for layout changes, new pages, workflow updates, form states, API wiring, and deployment preparation.
+The workspace keeps the entire build process in one place. Generated files appear in a navigable project tree, source can be inspected in the integrated editor, implementation plans and runtime events remain visible beside the conversation, and completed projects can be downloaded as portable ZIP archives. Projects and their message history are persisted so work can be reopened and continued by project identifier.
 
-The final outcome is one prompt producing a complete Web2 app package with editable files, product structure, implementation plan, and deployment readiness.
+BlackIn is designed as a complete product system. The browser application, generation API, model orchestration, workspace validation, project storage, and deployment configuration are developed together in one TypeScript monorepo and operated on Zerops.
 
-## Project Links
+## How it works
 
-The product walkthrough video is available at https://www.youtube.com/watch?v=UGXNKP0y-ZM.
+A project begins with a plain-language instruction. BlackIn validates the request, creates a project record, and streams generation events as the application is assembled. The generation service works inside an isolated virtual workspace where it can list, read, write, and remove project files without gaining shell access or access to the host repository.
 
-## Run the Complete App
+Before a project is saved, BlackIn validates its paths, file count, total size, package manifest, build scripts, and application entry point. Validated files are written to persistent storage and returned to the workspace, where they can be reviewed, edited, synchronized, reopened, or exported.
 
-Install dependencies and start both workspace services:
+When `GEMINI_API_KEY` is configured, BlackIn uses Google Gemini for model-backed project generation. Without a key, it selects the built-in deterministic generator so the full product workflow remains available for local development, testing, and deployment verification.
 
-```bash
-pnpm install
-pnpm dev
-```
+## Platform
 
-The frontend runs at `http://localhost:3000`; the generation API and WebSocket endpoint run at `http://localhost:4000`. Next.js proxies `/api/v1/*` to the API, so no local frontend environment variable is required.
+BlackIn combines a Next.js application with a Fastify generation service. Next.js provides the product experience, project workspace, server-side API gateway, and production application artifact. Fastify provides request validation, generation streams, WebSocket events, project lifecycle operations, file synchronization, persistence, and archive creation.
 
-The backend selects its provider automatically:
+The API streams newline-delimited generation events instead of waiting for an entire project to finish before responding. This keeps planning, file creation, progress, and completion states visible as they occur. The same service contract is used by both the Gemini provider and the deterministic provider.
 
-- With `GEMINI_API_KEY` in the root `.env.local`, it runs the Gemini tool-driven generator.
-- Without a key, it runs a local demo generator. The full prompt, stream, persistence, editor, and ZIP workflow still works offline.
+Project data is stored as atomic JSON records with restrictive file permissions. This storage model keeps the system operationally simple while preserving generated files, metadata, and conversation history across requests and application deployments.
 
-Useful checks are `pnpm test:api`, `pnpm typecheck:api`, `pnpm --filter web lint`, and `pnpm build`.
+## Zerops
 
-## Generation Backend
+Zerops is the runtime and deployment platform for BlackIn Studio. The repository includes a production `zerops.yml` that defines the build environment, runtime environment, deployable artifacts, caches, ports, readiness checks, service networking, and startup commands for the complete system.
 
-The backend lives in `apps/api` and follows the useful boundaries from Gemini CLI: the web UI is separate from the agent core, generation is an iterative tool loop, and all file tools are constrained to an isolated project root. The model can list, read, write, and delete virtual files, but it cannot run shell commands or access the host workspace. Generated paths, file sizes, project size, `package.json`, and application entry points are validated before the project is saved.
+The deployment uses two Node.js 20 services and one shared storage service. The `web` service runs the standalone Next.js application on port `3000` and is the only service that requires public access. The `api` service runs Fastify on port `4000` and remains private. Zerops service DNS allows the application to reach the API at `http://api:4000`, so browser requests can use the same-origin `/api/v1` gateway without exposing the API directly.
 
-Projects and chat history are stored as atomic JSON files under `.data/projects`. This is intentionally simple for local development and a single-container hackathon deployment. Generated projects can be downloaded as ZIP files directly from the API.
-
-Core endpoints:
-
-- `POST /api/v1/generate` streams newline-delimited generation events.
-- `POST /api/v1/contract/get-chat` reloads chat and generated files.
-- `GET /api/v1/projects/:projectId` returns a complete stored project.
-- `POST /api/v1/files/sync` saves editor changes.
-- `POST /api/v1/github/get-zip-file` exports the generated project.
-- `GET /api/v1/health` reports provider and persistence status.
-
-The design references the official [Gemini CLI architecture](https://github.com/google-gemini/gemini-cli/blob/main/GEMINI.md), [filesystem tool model](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/file-system.md), and [tool policy concepts](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/policy-engine.md).
-
-## Deploy to Zerops
-
-This repository includes a two-service `zerops.yml`. Create Node.js 20 services with hostnames `web` and `api`; enable public subdomain access only for `web`. Zerops resolves the backend privately as `http://api:4000`, and the frontend proxies browser API traffic to it.
-
-Add `GEMINI_API_KEY` as a secret on the `api` service. If it is omitted, the deployed app uses demo generation. The frontend remains in hackathon access mode, with wallet/auth integrations disabled.
-
-You can deploy either by connecting the `web` service to your GitHub/GitLab repository, or manually with zCLI from the repo root:
-
-```bash
-zcli push api --working-dir . --zerops-yaml-path zerops.yml
-zcli push web --working-dir . --zerops-yaml-path zerops.yml
-```
-
-Use `zerops-project-import.example.yml` as a starting point if you want to create the Zerops project from an import file. Add your real repository URL to `buildFromGit` before importing it.
-
-## Frontend Project Structure
-
-Frontend application routes and layouts are implemented in `apps/web/app`. The generation API is implemented in `apps/api/src`; its `generation`, `services`, `storage`, and `lib` folders separate model orchestration, workflows, persistence, and security policy. Shared frontend types remain in `packages/types`.
-
-## Project Architecture Diagram
+The `projectdata` service is mounted into the API runtime. Generated projects are stored under `/mnt/projectdata/blackin`, allowing runtime containers and application versions to be replaced without losing project records. The system does not require AWS, an external object store, or a separate container platform.
 
 ```mermaid
 flowchart LR
-    U["User in Browser"] --> FE["BlackIn Frontend (lighthouse-club)"]
-    FE --> PROXY["Next.js same-origin API proxy"]
-    PROXY --> API["Node.js API (apps/api)"]
-    FE --> WS["API WebSocket endpoint"]
-    API --> AGENT["Gemini-style tool loop"]
-    AGENT --> VFS["Constrained virtual workspace"]
-    VFS --> VALIDATE["Path and project validation"]
-    VALIDATE --> STORE["Local atomic JSON storage"]
-    API --> ZIP["In-memory ZIP export"]
+    USER["User"] -->|HTTPS| WEB
+
+    subgraph ZEROPS["Zerops project"]
+        WEB["web<br/>Next.js :3000"]
+        API["api<br/>Fastify :4000"]
+        DATA["projectdata<br/>Shared storage"]
+
+        WEB -->|"Private service DNS"| API
+        API -->|"Persistent mount"| DATA
+    end
+
+    API -->|"Optional generation provider"| GEMINI["Google Gemini"]
 ```
+
+### Git deployment
+
+Connect the `web` and `api` Zerops services to this repository. Both services use the same source, while the `setup` key in `zerops.yml` selects the correct pipeline definition for each runtime. Configure the API service with the `api` setup and the application service with the `web` setup.
+
+Create a shared storage service named `projectdata` and mount it on `api`. Add `GEMINI_API_KEY` as an API service secret when model-backed generation is required, then deploy `api` before `web`. Public subdomain access should be enabled for `web` and left disabled for `api`.
+
+The included `zerops-project-import.example.yml` documents the expected project topology. Add the repository URL before using it as an import definition.
+
+### zCLI deployment
+
+The same pipelines can be triggered from a clean local checkout with zCLI:
+
+```bash
+zcli login <token>
+zcli scope project <project-id>
+
+zcli service push api --setup api --workspace-state clean
+zcli service push web --setup web --workspace-state clean
+```
+
+`zcli service push` uploads the selected workspace state, runs the matching build pipeline, deploys the resulting artifact, and waits for the configured service checks. `.deployignore` prevents local caches, generated output, logs, project data, and development artifacts from entering the upload.
+
+### Runtime verification
+
+The public application should return a successful response after both pipelines are active:
+
+```bash
+curl --fail --silent --show-error \
+  https://web-2ad8-3000.prg1.zerops.app/ > /dev/null
+```
+
+The API runtime can be verified from its Zerops terminal without making the service public:
+
+```bash
+curl --fail http://127.0.0.1:4000/health
+curl --fail http://127.0.0.1:4000/api/v1/health
+test -d /mnt/projectdata/blackin && echo "Shared storage mounted"
+```
+
+## Configuration
+
+Production defaults are declared in `zerops.yml`. The web runtime receives `API_INTERNAL_URL=http://api:4000`, and the API runtime receives its host, port, storage path, generation provider, and default model configuration. Sensitive values belong in Zerops service secrets and must never be committed.
+
+Model-backed generation requires one secret:
+
+```bash
+GEMINI_API_KEY=<secret>
+```
+
+`GENERATION_PROVIDER=auto` selects Gemini when the key is present and the deterministic provider when it is absent. `GEMINI_MODEL` can be changed on the API service without changing the application service. Additional supported values are documented in `zerops.env.example` and `apps/api/.env.example`.
+
+## Development
+
+BlackIn requires Node.js 20 and uses pnpm 10.15.1 through Corepack.
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+The application runs at `http://localhost:3000`, and the generation API runs at `http://localhost:4000`. The local server gateway automatically targets the API at port `4000`, so no endpoint configuration is required for the standard development workflow.
+
+To enable Gemini locally, create an ignored `.env.local` file at the repository root:
+
+```bash
+GEMINI_API_KEY=<local-development-key>
+GENERATION_PROVIDER=auto
+```
+
+## Validation
+
+Run the focused application and API checks before publishing changes or triggering a production pipeline:
+
+```bash
+pnpm typecheck:api
+pnpm test:api
+pnpm --filter web lint
+pnpm --filter web build
+```
+
+The API suite covers health reporting, streamed generation, project persistence, archive downloads, file synchronization, and workspace path protections. The production build validates application routes, server-side API forwarding, static assets, and the standalone artifact deployed by Zerops.
+
+## Repository
+
+```text
+.
+|-- apps
+|   |-- api                 Generation, persistence, and project APIs
+|   `-- web                 Product experience and project workspace
+|-- packages
+|   |-- config-eslint       Shared linting rules
+|   |-- config-typescript   Shared TypeScript configuration
+|   `-- types               Shared project and stream contracts
+|-- zerops.yml              Zerops build and runtime definitions
+|-- zerops.env.example      Runtime configuration reference
+|-- zerops-project-import.example.yml
+|                            Zerops project topology
+`-- .deployignore           Deployment upload exclusions
+```
+
+Application routes live in `apps/web/app`, while reusable product components, state, hooks, and server integrations live in `apps/web/src`. The API separates generation providers, orchestration, storage, archive creation, and workspace policy under `apps/api/src`. Shared contracts remain in `packages/types`.
+
+## Status
+
+BlackIn currently supports prompt-driven generation, streamed progress, project persistence, project reopening, file synchronization, source inspection, ZIP export, deterministic generation, Gemini generation, and Zerops deployment. Account management, team workspaces, direct repository publishing, billing, and automated deployment of generated projects are under active development.
