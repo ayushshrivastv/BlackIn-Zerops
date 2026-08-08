@@ -20,7 +20,7 @@ import { usePlaygroundThemeStore } from '@/src/store/code/usePlaygroundThemeStor
 import { cn } from '@/src/lib/utils';
 
 export default function Page({ params }: { params: Promise<{ contractId: string }> }) {
-    const { setLoading, setCurrentContractId, cleanContract } = useBuilderChatStore();
+    const { setLoading, setCurrentContractId } = useBuilderChatStore();
     const { reset, collapseFileTree, setCollapseFileTree } = useCodeEditor();
     const unwrappedParams = React.use(params);
     const { contractId } = unwrappedParams;
@@ -102,7 +102,6 @@ export default function Page({ params }: { params: Promise<{ contractId: string 
 
     useEffect(() => {
         return () => {
-            cleanContract(contractId);
             resetContractId();
             reset();
             cleanWebSocketClient();
@@ -112,7 +111,10 @@ export default function Page({ params }: { params: Promise<{ contractId: string 
 
     return (
         <div className="playground-theme-scope relative h-screen w-screen overflow-hidden tracking-wider bg-black">
-            <PlaygroundLeftRail visible={showLeftRail} onToggle={() => setShowLeftRail((prev) => !prev)} />
+            <PlaygroundLeftRail
+                visible={showLeftRail}
+                onToggle={() => setShowLeftRail((prev) => !prev)}
+            />
 
             <div
                 className={cn(

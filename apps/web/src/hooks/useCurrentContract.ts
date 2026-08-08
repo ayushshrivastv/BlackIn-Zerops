@@ -5,7 +5,11 @@
 
 import { useBuilderChatStore } from '../store/code/useBuilderChatStore';
 
+const emptyContract = useBuilderChatStore.getState().getCurrentContract();
+
 export const useCurrentContract = () => {
-    const getCurrentContract = useBuilderChatStore((state) => state.getCurrentContract);
-    return getCurrentContract();
+    return useBuilderChatStore((state) => {
+        if (!state.currentContractId) return emptyContract;
+        return state.contracts[state.currentContractId] ?? emptyContract;
+    });
 };
