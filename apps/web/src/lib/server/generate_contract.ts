@@ -107,6 +107,7 @@ export default class GenerateContract {
         } = useCodeEditor.getState();
         const { setShowContractLimit, setShowMessageLimit, setShowRegenerateTime } =
             useLimitStore.getState();
+        let reconciliationTimer: ReturnType<typeof setInterval> | null = null;
 
         try {
             if (inFlightGenerationContracts.has(contractId)) {
@@ -172,6 +173,38 @@ export default class GenerateContract {
             }
 
             let buffer = '';
+            let streamSettled = false;
+            let reconciliationInFlight = false;
+
+            const applyPersistedState = async (state: 'pending' | 'complete' | 'error') => {
+                if (state === 'pending' || streamSettled) return false;
+                streamSettled = true;
+                await Playground.get_chat(contractId);
+                clearLivePreview();
+                setCurrentFileEditing(null);
+                setActivity('');
+                setLoading(false);
+                setCollapseFileTree(true);
+                setPhase(state === 'complete' ? PHASE_TYPES.COMPLETE : PHASE_TYPES.ERROR);
+                return true;
+            };
+
+            const reconcilePersistedState = async () => {
+                if (streamSettled || reconciliationInFlight) return;
+                reconciliationInFlight = true;
+                try {
+                    const state = await Playground.get_generation_state(contractId, messageId);
+                    if (await applyPersistedState(state)) {
+                        await reader.cancel().catch(() => undefined);
+                    }
+                } finally {
+                    reconciliationInFlight = false;
+                }
+            };
+
+            reconciliationTimer = setInterval(() => {
+                void reconcilePersistedState();
+            }, 5_000);
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -246,6 +279,7 @@ export default class GenerateContract {
                                 break;
 
                             case PHASE_TYPES.ERROR:
+                                streamSettled = true;
                                 if (hasStreamErrorDetails(event.data)) {
                                     console.warn('LLM stream warning:', event.data);
                                 }
@@ -260,6 +294,7 @@ export default class GenerateContract {
                                 break;
 
                             case STAGE.ERROR:
+                                streamSettled = true;
                                 setPhase(STAGE.ERROR);
                                 setLoading(false);
                                 toast.error(
@@ -272,6 +307,7 @@ export default class GenerateContract {
 
                             case STAGE.END:
                                 if ('data' in event.data && event.data.data) {
+                                    streamSettled = true;
                                     if (event.systemMessage) {
                                         upsertMessage(event.systemMessage);
                                     }
@@ -297,14 +333,19 @@ export default class GenerateContract {
             // const data = await response.json();
             // parseFileStructure(data.data);
 
-            await Playground.get_chat(contractId);
-            setCurrentFileEditing(null);
-            setPhase(PHASE_TYPES.COMPLETE);
-            setCollapseFileTree(true);
+            const persistedState = await Playground.get_generation_state(contractId, messageId);
+            if (!(await applyPersistedState(persistedState)) && !streamSettled) {
+                await Playground.get_chat(contractId);
+                setCurrentFileEditing(null);
+                setActivity('');
+                setPhase(PHASE_TYPES.COMPLETE);
+                setCollapseFileTree(true);
+            }
         } catch (error) {
             console.error('Chat stream error:', error);
             toast.error(error instanceof Error ? error.message : 'Generation request failed');
         } finally {
+            if (reconciliationTimer) clearInterval(reconciliationTimer);
             inFlightGenerationContracts.delete(contractId);
             setLoading(false);
         }
