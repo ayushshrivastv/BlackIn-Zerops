@@ -187,6 +187,7 @@ export class GeminiProjectGenerator implements ProjectGenerator {
     readonly model: string,
     private readonly maxToolRounds: number,
     client?: GoogleGenAI,
+    private readonly waitForRetry: (delayMs: number) => Promise<void> = waitForRetryDelay,
   ) {
     this.client = client ?? new GoogleGenAI({ apiKey });
   }
@@ -271,11 +272,21 @@ export class GeminiProjectGenerator implements ProjectGenerator {
         );
       }
 
-      const response = await this.client.models.generateContent({
-        model: this.model,
-        contents,
-        config: generationConfig,
-      });
+      const response = await withRateLimitRetry(
+        () =>
+          this.client.models.generateContent({
+            model: this.model,
+            contents,
+            config: generationConfig,
+          }),
+        async (delayMs) => {
+          await reportProgress(
+            isPlanningRound ? 'PLANNING' : 'BUILDING',
+            `Gemini reached its request limit. Continuing this project in ${Math.ceil(delayMs / 1_000)} seconds`,
+          );
+        },
+        this.waitForRetry,
+      );
 
       const modelContent = response.candidates?.[0]?.content;
       if (modelContent) contents.push(modelContent);
@@ -454,4 +465,36 @@ function formatQualityProgress(issues: string[]): string {
     .join(', ');
   const remaining = issues.length - 3;
   return `Quality review found ${issues.length} item${issues.length === 1 ? '' : 's'}. Repairing ${details}${remaining > 0 ? `, and ${remaining} more` : ''}`;
+}
+
+async function withRateLimitRetry<T>(
+  operation: () => Promise<T>,
+  onRetry: (delayMs: number) => Promise<void>,
+  waitForRetry: (delayMs: number) => Promise<void>,
+): Promise<T> {
+  const maxRetries = 3;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      const delayMs = getRateLimitDelayMs(error);
+      if (delayMs === null || attempt >= maxRetries) throw error;
+      await onRetry(delayMs);
+      await waitForRetry(delayMs);
+    }
+  }
+}
+
+function getRateLimitDelayMs(error: unknown): number | null {
+  const details = error instanceof Error ? error.message : JSON.stringify(error);
+  if (!/\b429\b|RESOURCE_EXHAUSTED|quota exceeded/i.test(details)) return null;
+
+  const retrySeconds = Number(
+    details.match(/retry in ([\d.]+)s/i)?.[1] ?? details.match(/retryDelay["']?\s*:\s*["']?([\d.]+)s/i)?.[1] ?? '60',
+  );
+  return Math.min(120_000, Math.max(5_000, Math.ceil(retrySeconds * 1_000) + 2_000));
+}
+
+async function waitForRetryDelay(delayMs: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }

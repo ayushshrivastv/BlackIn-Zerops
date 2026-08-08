@@ -17,6 +17,7 @@ export function buildRequestGuidance(instruction: string): string {
 
 Game requirements:
 - Use Phaser 3 for the game loop, Arcade Physics, collisions, camera, keyboard input, and pointer or touch input. In Next.js, load Phaser only on the client and destroy the game instance during cleanup.
+- Keep app/page.tsx as a small client shell. Split the game into dedicated modules for level data, the main scene and physics, and supporting UI or audio systems so later repairs do not replace one oversized file.
 - Design an original, recognizable player character and original world. Genre references may guide mechanics, but never copy protected characters, names, sprites, sounds, or level layouts.
 - Plan movement before coding: acceleration, deceleration, maximum speed, gravity, jump impulse, grounded state, collision resolution, and camera behavior. Tune constants together so movement feels intentional.
 - Do not represent the player, enemies, or collectibles as single unstyled rectangles or circles. Generate layered Phaser Graphics textures with a clear silhouette and distinct idle, run, jump, or danger states.
@@ -56,6 +57,12 @@ export function assessGeneratedProject(instruction: string, files: ProjectFile[]
   );
 
   if (PLATFORMER_PATTERN.test(instruction)) {
+    const implementationFiles = files.filter(
+      (file) => /\.[cm]?[jt]sx?$/i.test(file.path) && !/(?:^|\/)layout\.[jt]sx?$/i.test(file.path),
+    );
+    if (implementationFiles.length < 2) {
+      issues.push('Split the platformer into focused game modules instead of one oversized application file.');
+    }
     requirePattern(
       source,
       /gravity|setGravityY|velocityY|jumpVelocity|jumpImpulse/i,

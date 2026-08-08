@@ -71,6 +71,10 @@ class GameScene extends Phaser.Scene {
 }
 `,
       },
+      {
+        path: 'app/game/levels.ts',
+        content: 'export const levelData = [{ checkpoint: 1 }, { checkpoint: 2 }];',
+      },
     ]);
 
     expect(issues).toEqual([]);

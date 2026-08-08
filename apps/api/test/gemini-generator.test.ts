@@ -19,6 +19,7 @@ describe('GeminiProjectGenerator', () => {
     ];
     const generateContent = vi
       .fn()
+      .mockRejectedValueOnce(new Error('429 RESOURCE_EXHAUSTED: retry in 0s'))
       .mockResolvedValueOnce({
         functionCalls: [
           {
@@ -66,7 +67,8 @@ describe('GeminiProjectGenerator', () => {
       models: { generateContent },
     } as unknown as GoogleGenAI;
     const progress: string[] = [];
-    const generator = new GeminiProjectGenerator('test-key', 'test-model', 6, client);
+    const waitForRetry = vi.fn(async () => undefined);
+    const generator = new GeminiProjectGenerator('test-key', 'test-model', 6, client, waitForRetry);
 
     const result = await generator.generate({
       projectId: 'multi-round-project',
@@ -78,7 +80,9 @@ describe('GeminiProjectGenerator', () => {
       },
     });
 
-    expect(generateContent).toHaveBeenCalledTimes(3);
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    expect(waitForRetry).toHaveBeenCalledWith(5_000);
+    expect(progress).toContain('Gemini reached its request limit. Continuing this project in 5 seconds');
     expect(
       generateContent.mock.calls[0]?.[0].config.tools[0].functionDeclarations.map(
         (declaration: { name: string }) => declaration.name,

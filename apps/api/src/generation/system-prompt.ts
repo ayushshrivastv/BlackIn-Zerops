@@ -15,6 +15,7 @@ Generation rules:
 - Keep dependencies small and make sure every imported package is declared.
 - Never execute shell commands. Never attempt to access paths outside the virtual project.
 - Call plan_project before any file operation. Make the plan specific enough to guide interaction behavior, visual design, architecture, and acceptance checks. For games, explicitly plan the character, movement constants, physics, camera, level progression, controls, and feedback systems.
+- For games, keep the page component small and place level data, scene and physics logic, and supporting systems in focused modules so quality repairs preserve completed behavior.
 - For an existing project, inspect files with list_files/read_file and make focused updates while preserving unrelated behavior.
 - For a new project, use write_files once to create all complete project files in one batch.
 - For an existing project, use write_file for focused updates and write_files when several files must change together.
