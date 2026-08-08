@@ -2,6 +2,8 @@ import { fileURLToPath } from "node:url";
 
 export interface PreviewExampleProject {
   id: string;
+  projectName: string;
+  finalSummary: string;
   directory: string;
   entryFile: string;
   stylesheets: string[];
@@ -16,6 +18,9 @@ const EXAMPLE_PROJECTS_BY_PROMPT = new Map<string, PreviewExampleProject>([
     BRICKBOUND_EXAMPLE_PROMPT,
     {
       id: "brickbound-platformer",
+      projectName: "Brickbound",
+      finalSummary:
+        "Brickbound is complete as a polished browser platformer with responsive keyboard and touch controls, tuned running and jumping physics, enemies, coins, power-ups, checkpoints, particles, sound, multiple levels, lives, and persistent high scores. The complete project is ready for interactive preview and further refinement.",
       directory: fileURLToPath(
         new URL("../../examples/brickbound_platformer-2/", import.meta.url),
       ),

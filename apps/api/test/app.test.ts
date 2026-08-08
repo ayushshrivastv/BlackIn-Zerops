@@ -226,14 +226,19 @@ describe('generation API', () => {
     expect(events.some((event) => event.type === 'EDITING_FILE')).toBe(true);
     expect(events.some((event) => event.type === 'FINALIZING')).toBe(true);
     expect(events.at(-1)?.type).toBe('END');
-    expect(generation.body).not.toContain('Brickbound');
+    expect(generation.body).toContain('Brickbound is complete');
 
     const project = await app.inject({
       method: 'GET',
       url: `/api/v1/projects/${projectId}`,
     });
     expect(project.statusCode).toBe(200);
-    expect(project.body).not.toContain('Brickbound');
+    expect(project.json<{ data: { title: string; messages: Array<{ content: string }> } }>().data).toMatchObject({
+      title: 'Brickbound',
+      messages: expect.arrayContaining([
+        expect.objectContaining({ content: expect.stringContaining('Brickbound is complete') }),
+      ]),
+    });
 
     const started = await app.inject({
       method: 'POST',

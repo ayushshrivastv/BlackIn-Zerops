@@ -1,5 +1,6 @@
 import type { ProjectGenerator, ProjectRecord, StreamEvent } from '../types.js';
 import { createMessage, createStreamEvent } from '../lib/messages.js';
+import { matchPreviewExample } from '../preview/example-projects.js';
 import { ProjectStore } from '../storage/project-store.js';
 
 export type StreamEventWriter = (event: StreamEvent) => Promise<void> | void;
@@ -105,8 +106,11 @@ export class GenerationService {
       await this.writeStage(projectId, 'CREATING_FILES', 'Saving the generated workspace', writeEvent);
       await this.writeStage(projectId, 'FINALIZING', 'Preparing the final project handoff', writeEvent);
 
-      const finalMessage = createMessage(projectId, 'AI', generated.summary, 'END');
-      project.title = generated.title;
+      const exampleProject = matchPreviewExample(instruction);
+      const finalTitle = exampleProject?.projectName ?? generated.title;
+      const finalSummary = exampleProject?.finalSummary ?? generated.summary;
+      const finalMessage = createMessage(projectId, 'AI', finalSummary, 'END');
+      project.title = finalTitle;
       project.description = generated.description;
       project.provider = generated.provider;
       project.model = generated.model;
