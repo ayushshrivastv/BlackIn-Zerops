@@ -1,0 +1,44 @@
+/*
+ * Lighthouse
+ * © 2026 ayushshrivastv
+ */
+
+import { SYNC_FILES_URL } from '@/routes/api_routes';
+import { FileNode } from '@lighthouse/types';
+import axios from 'axios';
+
+export default class CodeEditorServer {
+    public static async syncFiles(
+        contractId: string,
+        files: FileNode[],
+        token: string,
+    ): Promise<boolean> {
+        try {
+            const { data } = await axios.post(
+                SYNC_FILES_URL,
+                {
+                    contractId,
+                    files: files.map((file) => ({
+                        path: file.id,
+                        content: file.content ?? '',
+                    })),
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                },
+            );
+
+            if (data.success) {
+                return true;
+            }
+
+            console.error('Server returned unsuccessfull response: ', data.message);
+            return false;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
+    }
+}
