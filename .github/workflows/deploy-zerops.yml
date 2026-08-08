@@ -36,27 +36,11 @@ jobs:
           zcli service push "prLbFXrRRJumQubhswhlGw"
           --setup "api"
           --workspace-state clean
-          --version-name "github-${GITHUB_SHA::7}"
-
-      - name: Wait for Zerops builder to recycle
-        run: sleep 45
+          --version-name "api-${GITHUB_SHA::7}"
 
       - name: Deploy web service
-        shell: bash
-        run: |
-          for attempt in 1 2 3; do
-            if zcli service push "RriPt4naSxOTRFEAQASwag" \
-              --setup "web" \
-              --workspace-state clean \
-              --version-name "github-${GITHUB_SHA::7}"; then
-              exit 0
-            fi
-
-            if [[ "$attempt" -eq 3 ]]; then
-              echo "::error::Zerops rejected the web deployment after 3 attempts."
-              exit 1
-            fi
-
-            echo "::warning::Zerops builder is still recycling; retrying in 60 seconds."
-            sleep 60
-          done
+        run: >-
+          zcli service push "RriPt4naSxOTRFEAQASwag"
+          --setup "web"
+          --workspace-state clean
+          --version-name "web-${GITHUB_SHA::7}"

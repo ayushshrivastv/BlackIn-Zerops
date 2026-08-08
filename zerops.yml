@@ -2,7 +2,7 @@
 zerops:
   - setup: web
     build:
-      base: nodejs@20
+      base: alpine/nodejs@20
       prepareCommands:
         - corepack enable
         - corepack prepare pnpm@10.15.1 --activate
@@ -26,13 +26,12 @@ zerops:
         httpGet:
           port: 3000
           path: /
-        failureTimeout: 120s
-        retryPeriod: 10s
+        failureTimeout: 120
+        retryPeriod: 10
     run:
-      base: nodejs@20
+      base: alpine/nodejs@20
       envVariables:
         NODE_ENV: production
-        HOSTNAME: 0.0.0.0
         PORT: "3000"
         API_INTERNAL_URL: http://api:4000
         NEXT_PUBLIC_DEV_ACCESS_MODE: "true"
@@ -46,7 +45,7 @@ zerops:
 
   - setup: api
     build:
-      base: nodejs@20
+      base: alpine/nodejs@20
       prepareCommands:
         - corepack enable
         - corepack prepare pnpm@10.15.1 --activate
@@ -63,10 +62,10 @@ zerops:
         httpGet:
           port: 4000
           path: /health
-        failureTimeout: 120s
-        retryPeriod: 10s
+        failureTimeout: 120
+        retryPeriod: 10
     run:
-      base: nodejs@20
+      base: alpine/nodejs@20
       envVariables:
         NODE_ENV: production
         HOST: 0.0.0.0
