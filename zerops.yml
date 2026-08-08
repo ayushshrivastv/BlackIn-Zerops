@@ -26,8 +26,8 @@ zerops:
         httpGet:
           port: 3000
           path: /
-        failureTimeout: 120
-        retryPeriod: 10
+        failureTimeout: 120s
+        retryPeriod: 10s
     run:
       base: alpine/nodejs@20
       envVariables:
@@ -62,8 +62,8 @@ zerops:
         httpGet:
           port: 4000
           path: /health
-        failureTimeout: 120
-        retryPeriod: 10
+        failureTimeout: 120s
+        retryPeriod: 10s
     run:
       base: alpine/nodejs@20
       envVariables:
