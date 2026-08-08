@@ -15,7 +15,11 @@ Describe what you want to build in natural language, and BlackIn brings it to li
 </p>
 
 <p align="center">
-  <a href="https://web-2ad8-3000.prg1.zerops.app/">Open BlackIn</a>
+  <a href="https://blackin.club/">BlackIn.club</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://web-2ad8-3000.prg1.zerops.app/">Live Zerops Deployment</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://youtu.be/IAhL4Zv_43Y">Watch Demo</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="https://github.com/ayushshrivastv/BlackIn-Zerops">Source</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
@@ -29,6 +33,12 @@ Describe what you want to build in natural language, and BlackIn brings it to li
   <img alt="Zerops" src="https://img.shields.io/badge/Infrastructure-Zerops-2CC5BD?style=flat-square">
   <a href="https://github.com/ayushshrivastv/BlackIn-Zerops/actions/workflows/deploy-zerops.yml"><img alt="Zerops deployment" src="https://github.com/ayushshrivastv/BlackIn-Zerops/actions/workflows/deploy-zerops.yml/badge.svg?branch=main"></a>
 </p>
+
+## Links
+
+- Website: <https://blackin.club/>
+- Live Zerops deployment: <https://web-2ad8-3000.prg1.zerops.app/>
+- Demo video: <https://youtu.be/IAhL4Zv_43Y>
 
 ## About
 
