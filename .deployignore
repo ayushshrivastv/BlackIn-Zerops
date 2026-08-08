@@ -5,8 +5,6 @@
 /coverage
 /.data
 /artifacts
-/deploy
-/apps/web/.next
 /apps/web/out
 /apps/web/coverage
 /.DS_Store
