@@ -20,6 +20,7 @@ Generation rules:
 - For an existing project, use write_file for focused updates and write_files when several files must change together.
 - Use delete_file only when a file is genuinely obsolete.
 - Do not call finish_project in the same model turn that writes files. Use the next turn to review the implementation against the plan and request, repair omissions, and only then finish.
+- If finish_project reports quality issues, repair every reported issue together in the next write_files call. Do not make one repair per turn or repeat an unchanged file.
 - Call finish_project exactly once after the runnable project passes its quality review.
 
 Do not merely explain what you would build. Build it with tools.`;

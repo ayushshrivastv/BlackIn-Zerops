@@ -320,9 +320,7 @@ export class GeminiProjectGenerator implements ProjectGenerator {
             : [];
           await reportProgress(
             'BUILDING',
-            issues.length > 0
-              ? `Quality review found ${issues.length} item${issues.length === 1 ? '' : 's'} to improve before finishing`
-              : 'Reviewing the first implementation before finalizing',
+            issues.length > 0 ? formatQualityProgress(issues) : 'Reviewing the first implementation before finalizing',
           );
         }
         responseParts.push({
@@ -447,4 +445,13 @@ function planRequiredResult(): Record<string, unknown> {
     ok: false,
     error: 'Call plan_project and complete the structured plan before using workspace tools.',
   };
+}
+
+function formatQualityProgress(issues: string[]): string {
+  const details = issues
+    .slice(0, 3)
+    .map((issue) => issue.replace(/[.!]$/, '').toLowerCase())
+    .join(', ');
+  const remaining = issues.length - 3;
+  return `Quality review found ${issues.length} item${issues.length === 1 ? '' : 's'}. Repairing ${details}${remaining > 0 ? `, and ${remaining} more` : ''}`;
 }

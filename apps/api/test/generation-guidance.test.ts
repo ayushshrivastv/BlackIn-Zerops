@@ -3,7 +3,7 @@ import { assessGeneratedProject, buildRequestGuidance, isGameRequest } from '../
 import { PROJECT_GENERATION_SYSTEM_PROMPT } from '../src/generation/system-prompt.js';
 
 const platformerRequest =
-  'Build a Mario inspired platformer with mobile controls, sound, particles, localStorage high scores, multiple levels, checkpoints, power-ups, and pause.';
+  'Build an original platformer with keyboard and mobile controls, enemies, coins, score, lives, sound, particles, localStorage high scores, multiple levels, checkpoints, power-ups, pause, and restart.';
 
 describe('generation guidance', () => {
   it('detects games and gives them a specific design and physics contract', () => {
@@ -11,6 +11,7 @@ describe('generation guidance', () => {
     expect(buildRequestGuidance(platformerRequest)).toContain('Phaser 3');
     expect(buildRequestGuidance(platformerRequest)).toContain('original, recognizable player character');
     expect(PROJECT_GENERATION_SYSTEM_PROMPT).toContain('Call plan_project before any file operation');
+    expect(PROJECT_GENERATION_SYSTEM_PROMPT).toContain('repair every reported issue together');
   });
 
   it('rejects primitive platformer prototypes that omit requested systems', () => {
@@ -46,6 +47,10 @@ export default function Game() {
 import Phaser from 'phaser';
 const levels = [{ checkpoint: 1 }, { checkpoint: 2 }];
 let currentLevel = 0;
+let enemies = [{ active: true }];
+let coins = [{ collected: false }];
+let lives = 3;
+let score = 0;
 localStorage.setItem('highScore', '100');
 class GameScene extends Phaser.Scene {
   create() {
@@ -55,12 +60,14 @@ class GameScene extends Phaser.Scene {
     player.setGravityY(900);
     this.physics.add.collider(player, this.physics.add.staticGroup());
     this.cameras.main.startFollow(player);
+    this.input.keyboard?.createCursorKeys();
     this.input.on('pointerdown', () => player.setVelocityY(-420));
     this.add.particles(0, 0, 'playerCharacter', { emitting: false });
     this.sound.add('jump');
     const powerUp = { active: true };
     this.scene.pause();
   }
+  restart() { this.scene.start(); }
 }
 `,
       },

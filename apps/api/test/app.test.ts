@@ -299,6 +299,10 @@ export default function GamePage() {
 }
 `,
           },
+          {
+            path: 'globals.css',
+            content: 'body { --preview-marker: #123456; }',
+          },
         ],
       },
     });
@@ -314,5 +318,6 @@ export default function GamePage() {
     });
     expect(preview.statusCode).toBe(200);
     expect(preview.body).toContain('Phaser preview ready');
+    expect(preview.body).toContain('--preview-marker');
   });
 });

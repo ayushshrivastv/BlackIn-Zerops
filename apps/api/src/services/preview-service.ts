@@ -9,7 +9,7 @@ const MAX_PREVIEW_SOURCE_BYTES = 3_000_000;
 const ALLOWED_PACKAGES = new Set(['lucide-react', 'phaser', 'react', 'react-dom', 'react-dom/client', 'react/jsx-dev-runtime', 'react/jsx-runtime']);
 const NEXT_STUBS = new Set(['next/head', 'next/image', 'next/link', 'next/navigation']);
 const ENTRY_CANDIDATES = ['app/page.tsx', 'src/app/page.tsx', 'src/main.tsx', 'src/main.jsx', 'src/App.tsx', 'src/App.jsx'];
-const GLOBAL_STYLE_CANDIDATES = ['app/globals.css', 'src/app/globals.css', 'src/index.css', 'src/App.css', 'styles/globals.css', 'style.css'];
+const GLOBAL_STYLE_CANDIDATES = ['app/globals.css', 'src/app/globals.css', 'src/index.css', 'src/App.css', 'styles/globals.css', 'globals.css', 'style.css'];
 
 export type PreviewStatus = 'idle' | 'building' | 'ready' | 'error';
 

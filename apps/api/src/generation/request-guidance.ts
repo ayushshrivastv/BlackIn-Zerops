@@ -78,25 +78,39 @@ export function assessGeneratedProject(instruction: string, files: ProjectFile[]
 
   const requestedFeatures: Array<[RegExp, RegExp, string]> = [
     [
+      /\bkeyboard\b/i,
+      /createCursorKeys|keyboard|keydown|Key[A-Z]|Arrow(?:Left|Right|Up|Down)/i,
+      'Add working keyboard controls.',
+    ],
+    [
       /\b(mobile|touch)\b/i,
-      /pointerdown|pointerup|touchstart|touchend|onPointerDown/i,
+      /pointerdown|pointerup|touchstart|touchend|onPointerDown|setInteractive|activePointer/i,
       'Add working mobile or touch controls.',
     ],
     [
       /\bsound|audio\b/i,
-      /AudioContext|new Audio\s*\(|sound\.add|this\.sound|oscillator/i,
+      /AudioContext|webkitAudioContext|createOscillator|new Audio\s*\(|sound\.add|this\.sound|oscillator|playSound|\bsfx\b/i,
       'Implement sound effects and a user-controlled audio state.',
     ],
     [/\bparticles?\b/i, /particles?|emitter/i, 'Implement the requested particle feedback.'],
     [/\bhigh scores?|localStorage\b/i, /localStorage/i, 'Persist the requested high score with localStorage.'],
     [
       /\bmultiple levels?|levels\b/i,
-      /currentLevel|levelIndex|levels\s*[=:]/i,
+      /currentLevel|levelIndex|levels?\s*[=:]|stages?\s*[=:]|levelData|stageData/i,
       'Implement a real multi-level progression model.',
     ],
     [/\bcheckpoints?\b/i, /checkpoint/i, 'Implement checkpoint state and respawning.'],
-    [/\bpower-ups?\b/i, /powerUp|power-up|powerup/i, 'Implement collectible power-ups that change gameplay.'],
+    [
+      /\bpower-ups?\b/i,
+      /powerUp|power-up|powerup|shield|invincib|speedBoost/i,
+      'Implement collectible power-ups that change gameplay.',
+    ],
+    [/\benemies?\b/i, /enemies|enemy|foe|hazard/i, 'Implement enemies with active gameplay behavior.'],
+    [/\bcoins?\b/i, /coins?|collectible/i, 'Implement collectible coins that update game state.'],
+    [/\blives?\b/i, /lives|playerLives|lifeCount/i, 'Implement player lives and failure recovery.'],
+    [/\bscore\b/i, /\bscore\b/i, 'Implement a score that responds to gameplay.'],
     [/\bpause\b/i, /pause/i, 'Implement a working pause and resume state.'],
+    [/\brestart\b/i, /restart|resetGame|scene\.start/i, 'Implement a working restart flow.'],
   ];
 
   for (const [requestPattern, sourcePattern, message] of requestedFeatures) {
