@@ -71,7 +71,7 @@ zerops:
         PORT: "4000"
         DATA_DIR: /mnt/projectdata/blackin
         GENERATION_PROVIDER: auto
-        GEMINI_MODEL: gemini-2.5-flash
+        GEMINI_MODEL: gemini-2.5-flash-lite
         CORS_ORIGINS: https://blackin.club,https://web-2ad8-3000.prg1.zerops.app
       ports:
         - port: 4000
