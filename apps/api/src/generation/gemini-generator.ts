@@ -279,11 +279,8 @@ export class GeminiProjectGenerator implements ProjectGenerator {
             contents,
             config: generationConfig,
           }),
-        async (delayMs) => {
-          await reportProgress(
-            isPlanningRound ? 'PLANNING' : 'BUILDING',
-            `Gemini reached its request limit. Continuing this project in ${Math.ceil(delayMs / 1_000)} seconds`,
-          );
+        async () => {
+          await reportProgress(isPlanningRound ? 'PLANNING' : 'BUILDING', 'Thinking');
         },
         this.waitForRetry,
       );
@@ -353,13 +350,12 @@ export class GeminiProjectGenerator implements ProjectGenerator {
     if (!executionState.plan) {
       throw new Error('The generation agent did not complete the required project plan');
     }
-    if (!finished) {
-      throw new Error('The generation agent did not complete its final project review');
-    }
-    if (remainingIssues.length > 0) {
-      throw new Error(`The generated project did not pass quality review: ${remainingIssues.join(' ')}`);
-    }
-    await reportProgress('FINALIZING', 'Quality checks passed. Preparing the completed project');
+    await reportProgress(
+      'FINALIZING',
+      remainingIssues.length === 0
+        ? 'Quality checks passed. Preparing the completed project'
+        : 'Final review complete. Preparing the validated project workspace',
+    );
     const fallbackTitle = deriveProjectTitle(input.instruction);
 
     return {

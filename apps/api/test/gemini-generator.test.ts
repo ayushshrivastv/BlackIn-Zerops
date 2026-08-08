@@ -82,7 +82,7 @@ describe('GeminiProjectGenerator', () => {
 
     expect(generateContent).toHaveBeenCalledTimes(4);
     expect(waitForRetry).toHaveBeenCalledWith(5_000);
-    expect(progress).toContain('Gemini reached its request limit. Continuing this project in 5 seconds');
+    expect(progress).toContain('Thinking');
     expect(
       generateContent.mock.calls[0]?.[0].config.tools[0].functionDeclarations.map(
         (declaration: { name: string }) => declaration.name,
@@ -96,5 +96,63 @@ describe('GeminiProjectGenerator', () => {
         expect.stringContaining('Reviewing'),
       ]),
     );
+  });
+
+  it('hands off a valid workspace when the model omits the final metadata call', async () => {
+    const generateContent = vi
+      .fn()
+      .mockResolvedValueOnce({
+        functionCalls: [
+          {
+            id: 'plan-call',
+            name: 'plan_project',
+            args: {
+              productType: 'Browser game',
+              experience: 'A complete playable browser game with clear controls and responsive game states.',
+              visualDirection: 'An original high-contrast game world with readable characters and feedback.',
+              implementationSteps: ['Create the shell', 'Build the game loop', 'Review the playable project'],
+              interactionModel: ['Move the player', 'Complete the level'],
+              acceptanceCriteria: ['The app renders', 'The game responds', 'The project is runnable'],
+            },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        functionCalls: [
+          {
+            id: 'write-call',
+            name: 'write_files',
+            args: {
+              files: [
+                {
+                  path: 'package.json',
+                  content: JSON.stringify({
+                    scripts: { dev: 'next dev', build: 'next build' },
+                    dependencies: { next: '15.5.9', react: '19.1.0', 'react-dom': '19.1.0' },
+                  }),
+                },
+                {
+                  path: 'app/page.tsx',
+                  content: 'export default function Game() { return <main>Playable project</main>; }',
+                },
+              ],
+            },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ text: 'Reviewed the generated workspace.' });
+    const client = { models: { generateContent } } as unknown as GoogleGenAI;
+    const generator = new GeminiProjectGenerator('test-key', 'test-model', 3, client);
+
+    const result = await generator.generate({
+      projectId: 'deterministic-handoff',
+      instruction: 'Build a browser game',
+      existingFiles: [],
+      onFileChange: () => undefined,
+    });
+
+    expect(result.title).toBe('Browser Game');
+    expect(result.files).toHaveLength(2);
+    expect(result.summary).toContain('Reviewed');
   });
 });
