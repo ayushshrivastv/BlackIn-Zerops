@@ -1,0 +1,49 @@
+name: Deploy to Zerops
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zerops-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ matrix.setup }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - setup: api
+            service_id: prLbFXrRRJumQubhswhlGw
+          - setup: web
+            service_id: RriPt4naSxOTRFEAQASwag
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Zerops CLI
+        run: npm install --global @zerops/zcli@1.1.0
+
+      - name: Authenticate with Zerops
+        env:
+          ZEROPS_TOKEN: ${{ secrets.ZEROPS_TOKEN }}
+        run: zcli login "$ZEROPS_TOKEN"
+
+      - name: Deploy ${{ matrix.setup }} service
+        env:
+          ZEROPS_SERVICE_ID: ${{ matrix.service_id }}
+          ZEROPS_SETUP: ${{ matrix.setup }}
+        run: >-
+          zcli service push "$ZEROPS_SERVICE_ID"
+          --setup "$ZEROPS_SETUP"
+          --workspace-state clean
+          --version-name "github-${GITHUB_SHA::7}"

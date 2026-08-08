@@ -25,6 +25,7 @@
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-20-339933?style=flat-square&logo=nodedotjs&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Zerops" src="https://img.shields.io/badge/Infrastructure-Zerops-2CC5BD?style=flat-square">
+  <a href="https://github.com/ayushshrivastv/BlackIn-Zerops/actions/workflows/deploy-zerops.yml"><img alt="Zerops deployment" src="https://github.com/ayushshrivastv/BlackIn-Zerops/actions/workflows/deploy-zerops.yml/badge.svg?branch=main"></a>
 </p>
 
 ## About
@@ -77,7 +78,9 @@ flowchart LR
 
 ### Git deployment
 
-Connect the `web` and `api` Zerops services to this repository. Both services use the same source, while the `setup` key in `zerops.yml` selects the correct pipeline definition for each runtime. Configure the API service with the `api` setup and the application service with the `web` setup.
+Pushes to `main` automatically deploy the complete application through the `Deploy to Zerops` GitHub Actions workflow. The workflow runs isolated deployment jobs for the `api` and `web` services, explicitly selects the matching setup from `zerops.yml`, and reports each pipeline independently. It can also be started manually from the repository's Actions page.
+
+Authentication is provided by the encrypted `ZEROPS_TOKEN` repository secret. The token is scoped to the BlackIn Zerops project and is never stored in the source tree or workflow logs. Both services use the same committed source while Zerops builds, releases, and verifies each runtime with its own pipeline definition.
 
 Create a shared storage service named `projectdata` and mount it on `api`. Add `GEMINI_API_KEY` as an API service secret when model-backed generation is required, then deploy `api` before `web`. Public subdomain access should be enabled for `web` and left disabled for `api`.
 
