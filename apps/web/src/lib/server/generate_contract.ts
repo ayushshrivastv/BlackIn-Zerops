@@ -191,9 +191,7 @@ export default class GenerateContract {
 
                         switch (event.type) {
                             case PHASE_TYPES.STARTING:
-                                if (event.systemMessage) {
-                                    upsertMessage(event.systemMessage);
-                                }
+                                setPhase(PHASE_TYPES.STARTING);
                                 break;
 
                             case STAGE.CONTEXT:
@@ -209,7 +207,6 @@ export default class GenerateContract {
                             case STAGE.FINALIZING:
                                 if (event.systemMessage) {
                                     setPhase(event.systemMessage.stage);
-                                    upsertMessage(event.systemMessage);
                                 }
                                 break;
 
@@ -426,9 +423,7 @@ export default class GenerateContract {
 
                         switch (event.type) {
                             case PHASE_TYPES.STARTING:
-                                if (event.systemMessage) {
-                                    upsertMessage(event.systemMessage);
-                                }
+                                setPhase(PHASE_TYPES.STARTING);
                                 break;
 
                             case STAGE.CONTEXT:
@@ -443,7 +438,7 @@ export default class GenerateContract {
                             case STAGE.CREATING_FILES:
                             case STAGE.FINALIZING:
                                 if (event.systemMessage) {
-                                    upsertMessage(event.systemMessage);
+                                    setPhase(event.systemMessage.stage);
                                 }
                                 break;
 

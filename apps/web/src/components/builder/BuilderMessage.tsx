@@ -13,7 +13,6 @@ import { useCodeEditor } from '@/src/store/code/useCodeEditor';
 import { useExecutorStore } from '@/src/store/model/useExecutorStore';
 import { SidePanelValues } from '../code/EditorSidePanel';
 import { useEditPlanStore } from '@/src/store/code/useEditPlanStore';
-import SystemMessage from './SystemMessage';
 import { FiCopy, FiCheck } from 'react-icons/fi';
 import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import { usePlaygroundThemeStore } from '@/src/store/code/usePlaygroundThemeStore';
@@ -39,6 +38,7 @@ export default function BuilderMessage({
     const { setCurrentState } = useSidePanelStore();
     const { setMessage } = useEditPlanStore();
     const { theme } = usePlaygroundThemeStore();
+    const latestUserMessageId = messages.filter((entry) => entry.role === 'USER').at(-1)?.id;
     const latestAIMessageId = messages.filter((entry) => entry.role === 'AI').at(-1)?.id;
     const shouldAnimateAIMessage = message.role === 'AI' && message.id === latestAIMessageId;
     const pacedAIText = usePacedText(returnParsedData(message.content), shouldAnimateAIMessage);
@@ -129,18 +129,14 @@ export default function BuilderMessage({
                 />
             )}
 
-            {message.role === 'USER' && loading && !messages.some((m) => m.role === 'AI') && (
-                <div className="flex justify-start w-full mt-2 ">
+            {message.role === 'USER' && loading && message.id === latestUserMessageId && (
+                <div className="flex justify-start w-full mt-2">
                     <div className="flex items-start gap-x-2 max-w-[86%]">
                         <AppLogo showLogoText={false} size={22} />
-                        <div className="playground-ai-loading-bubble px-4 py-2 rounded-2xl border border-neutral-800 text-sm font-normal bg-[#08090a] text-white text-left tracking-wider text-[13px] italic">
-                            <div className="flex items-center gap-x-1">
-                                <div className="flex space-x-1">
-                                    <div className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                    <div className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                    <div className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-bounce"></div>
-                                </div>
-                            </div>
+                        <div className="playground-ai-loading-bubble rounded-2xl border border-neutral-800 bg-[#08090a] px-4 py-2 text-left text-[13px] font-normal text-white">
+                            <span className="motion-safe:animate-pulse motion-reduce:opacity-80">
+                                Thinking
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -182,11 +178,12 @@ export default function BuilderMessage({
                 </div>
             )}
 
-            {message.role === 'SYSTEM' && (
-                <div className="flex justify-start items-start w-full my-4 ">
-                    <div className="flex items-start gap-x-2 w-full">
-                        <div className="rounded-[4px] text-sm font-normal w-full text-light text-left tracking-wider text-[13px]">
-                            <SystemMessage message={message} />
+            {message.role === 'SYSTEM' && message.stage === 'ERROR' && (
+                <div className="my-3 flex w-full items-start justify-start">
+                    <div className="flex max-w-[86%] items-start gap-x-2">
+                        <AppLogo showLogoText={false} size={22} />
+                        <div className="rounded-2xl border border-red-900/70 bg-red-950/30 px-4 py-2 text-left text-[13px] font-normal text-red-100">
+                            {message.content}
                         </div>
                     </div>
                 </div>
