@@ -7,7 +7,7 @@ import type { ProjectFile } from '../types.js';
 const require = createRequire(import.meta.url);
 const MAX_PREVIEW_SOURCE_BYTES = 3_000_000;
 const ALLOWED_PACKAGES = new Set(['lucide-react', 'phaser', 'react', 'react-dom', 'react-dom/client', 'react/jsx-dev-runtime', 'react/jsx-runtime']);
-const NEXT_STUBS = new Set(['next/head', 'next/image', 'next/link', 'next/navigation']);
+const NEXT_STUBS = new Set(['next/dynamic', 'next/head', 'next/image', 'next/link', 'next/navigation']);
 const ENTRY_CANDIDATES = ['app/page.tsx', 'src/app/page.tsx', 'src/main.tsx', 'src/main.jsx', 'src/App.tsx', 'src/App.jsx'];
 const GLOBAL_STYLE_CANDIDATES = ['app/globals.css', 'src/app/globals.css', 'src/index.css', 'src/App.css', 'styles/globals.css', 'globals.css', 'style.css'];
 
@@ -309,6 +309,27 @@ function validateDeclaredDependencies(packageJson: Record<string, unknown>): voi
 }
 
 function nextStubSource(modulePath: string): string {
+  if (modulePath === 'next/dynamic') {
+    return `import React, { Suspense, lazy } from 'react';
+export default function dynamic(loader, options = {}) {
+  const LazyComponent = lazy(async () => {
+    const loaded = await loader();
+    if (loaded && typeof loaded === 'object' && 'default' in loaded) return loaded;
+    return { default: loaded };
+  });
+  const Loading = options.loading;
+  return function DynamicComponent(props) {
+    const fallback = Loading
+      ? React.createElement(Loading, { error: null, isLoading: true, pastDelay: true })
+      : null;
+    return React.createElement(
+      Suspense,
+      { fallback },
+      React.createElement(LazyComponent, props),
+    );
+  };
+}`;
+  }
   if (modulePath === 'next/image') {
     return `import React from 'react';
 export default function Image({ src, alt = '', fill, priority, quality, loader, ...props }) {

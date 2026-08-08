@@ -15,7 +15,7 @@ import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import { useCodeEditor } from '@/src/store/code/useCodeEditor';
 import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
 import { selectPreviewSession, usePreviewStore } from '@/src/store/code/usePreviewStore';
-import { SidePanelValues } from '../code/EditorSidePanel';
+import { SidePanelValues } from '@/src/types/side-panel';
 import { FileNode, NODE } from '@lighthouse/types';
 
 export default function RightPanelActions() {

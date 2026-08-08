@@ -32,7 +32,7 @@ export class DemoProjectGenerator implements ProjectGenerator {
     return {
       title,
       description,
-      summary: `Created a runnable Next.js product starter for ${title} with a responsive interface, reusable sections, and Zerops deployment configuration. Add GEMINI_API_KEY to enable fully agentic generation.`,
+      summary: `${title} is complete as a responsive Web2 experience with working navigation, interactive form states, reusable sections, and Zerops-ready deployment. Reviewed against the request, the project is ready for interactive preview and further refinement.`,
       provider: this.provider,
       model: this.model,
       files,

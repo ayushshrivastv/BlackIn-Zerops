@@ -170,7 +170,8 @@ const functionDeclarations: FunctionDeclaration[] = [
         },
         summary: {
           type: Type.STRING,
-          description: 'Concise summary of what was built or changed.',
+          description:
+            'Polished two- or three-sentence product handoff covering the delivered experience, its important user-facing behavior, and readiness for interactive preview and refinement.',
         },
       },
       required: ['title', 'description', 'summary'],
@@ -229,7 +230,6 @@ export class GeminiProjectGenerator implements ProjectGenerator {
     };
 
     let finished: z.infer<typeof finishSchema> | null = null;
-    let lastText = '';
 
     for (let round = 0; round < this.maxToolRounds; round += 1) {
       executionState.wroteFilesThisRound = false;
@@ -287,7 +287,6 @@ export class GeminiProjectGenerator implements ProjectGenerator {
 
       const modelContent = response.candidates?.[0]?.content;
       if (modelContent) contents.push(modelContent);
-      lastText = response.text?.trim() || lastText;
 
       const calls = response.functionCalls ?? [];
       if (calls.length === 0) {
@@ -361,12 +360,20 @@ export class GeminiProjectGenerator implements ProjectGenerator {
     return {
       title: finished?.title ?? fallbackTitle,
       description: finished?.description ?? input.instruction.trim().replace(/\s+/g, ' ').slice(0, 280),
-      summary: finished?.summary ?? (lastText || `Generated a complete project for ${fallbackTitle}.`),
+      summary: finished?.summary ?? createFallbackSummary(fallbackTitle, executionState.plan),
       provider: this.provider,
       model: this.model,
       files,
     };
   }
+}
+
+function createFallbackSummary(
+  title: string,
+  plan: z.infer<typeof projectPlanSchema>,
+): string {
+  const experience = plan.experience.trim().replace(/\s+/g, ' ').replace(/[.!?]?$/, '.');
+  return `${title} is complete. ${experience} Reviewed against the request, the project is ready for interactive preview and further refinement.`;
 }
 
 async function executeTool(

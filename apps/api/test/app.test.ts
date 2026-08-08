@@ -320,4 +320,73 @@ export default function GamePage() {
     expect(preview.body).toContain('Phaser preview ready');
     expect(preview.body).toContain('--preview-marker');
   });
+
+  it('supports client-only components loaded with next/dynamic', async () => {
+    const projectId = 'dynamic-preview';
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: {
+        contract_id: projectId,
+        instruction: 'Build a client-only browser game',
+      },
+    });
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/files/sync',
+      payload: {
+        contractId: projectId,
+        files: [
+          {
+            path: 'package.json',
+            content: JSON.stringify({
+              scripts: { dev: 'next dev', build: 'next build' },
+              dependencies: {
+                next: '15.5.9',
+                react: '19.1.0',
+                'react-dom': '19.1.0',
+              },
+            }),
+          },
+          {
+            path: 'app/page.tsx',
+            content: `
+'use client';
+import dynamic from 'next/dynamic';
+
+const Game = dynamic(() => import('./game').then((module) => module.Game), {
+  ssr: false,
+  loading: () => <p>Loading the world</p>,
+});
+
+export default function GamePage() {
+  return <main><Game /></main>;
+}
+`,
+          },
+          {
+            path: 'app/game.tsx',
+            content: `
+export function Game() {
+  return <canvas aria-label="Dynamic game preview" />;
+}
+`,
+          },
+        ],
+      },
+    });
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(started.statusCode, started.body).toBe(200);
+    const preview = await app.inject({
+      method: 'GET',
+      url: `/api/v1/previews/${projectId}`,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.body).toContain('Dynamic game preview');
+    expect(preview.body).toContain('Loading the world');
+  });
 });

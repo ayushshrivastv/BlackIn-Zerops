@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import ToolTipComponent from '../ui/TooltipComponent';
-import { SidePanelValues } from './EditorSidePanel';
+import { SidePanelValues } from '@/src/types/side-panel';
 import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
 import { selectPreviewSession, usePreviewStore } from '@/src/store/code/usePreviewStore';
 

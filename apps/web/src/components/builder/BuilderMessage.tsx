@@ -11,13 +11,14 @@ import PlanExecutorPanel from '../code/PlanExecutorPanel';
 import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
 import { useCodeEditor } from '@/src/store/code/useCodeEditor';
 import { useExecutorStore } from '@/src/store/model/useExecutorStore';
-import { SidePanelValues } from '../code/EditorSidePanel';
+import { SidePanelValues } from '@/src/types/side-panel';
 import { useEditPlanStore } from '@/src/store/code/useEditPlanStore';
 import { FiCopy, FiCheck } from 'react-icons/fi';
 import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import { usePlaygroundThemeStore } from '@/src/store/code/usePlaygroundThemeStore';
 import { usePacedText } from '@/src/hooks/usePacedText';
 import ClarificationQuestionCard, { parseClarificationPayload } from './ClarificationQuestionCard';
+import { PHASE_TYPES } from '@/src/types/stream_event_types';
 
 interface BuilderMessageProps {
     message: Message;
@@ -129,25 +130,28 @@ export default function BuilderMessage({
                 />
             )}
 
-            {message.role === 'USER' && loading && message.id === latestUserMessageId && (
-                <div className="flex justify-start w-full mt-2">
-                    <div className="flex items-start gap-x-2 max-w-[86%]">
-                        <AppLogo showLogoText={false} size={22} />
-                        <div
-                            role="status"
-                            aria-live="polite"
-                            aria-busy="true"
-                            className="playground-ai-loading-bubble flex items-center gap-2 rounded-2xl border border-neutral-800 bg-[#08090a] px-4 py-2 text-left text-[13px] font-normal text-white"
-                        >
-                            <span>{activity || 'Thinking'}</span>
-                            <span
-                                aria-hidden="true"
-                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-400 motion-safe:animate-pulse motion-reduce:opacity-80"
-                            />
+            {message.role === 'USER' &&
+                loading &&
+                contract.phase !== PHASE_TYPES.COMPLETE &&
+                message.id === latestUserMessageId && (
+                    <div className="flex justify-start w-full mt-2">
+                        <div className="flex items-start gap-x-2 max-w-[86%]">
+                            <AppLogo showLogoText={false} size={22} />
+                            <div
+                                role="status"
+                                aria-live="polite"
+                                aria-busy="true"
+                                className="playground-ai-loading-bubble flex items-center gap-2 rounded-2xl border border-neutral-800 bg-[#08090a] px-4 py-2 text-left text-[13px] font-normal text-white"
+                            >
+                                <span>{activity || 'Thinking'}</span>
+                                <span
+                                    aria-hidden="true"
+                                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-400 motion-safe:animate-pulse motion-reduce:opacity-80"
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
             {message.role === 'AI' && (
                 <div className="flex justify-start w-full">

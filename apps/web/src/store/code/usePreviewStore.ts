@@ -36,57 +36,74 @@ const idleSession = (projectId: string): PreviewSession => ({
     revision: 0,
 });
 const EMPTY_PREVIEW_SESSION = idleSession('');
+const inFlightPreviewStarts = new Map<string, Promise<PreviewSession>>();
 
 export const usePreviewStore = create<PreviewStore>((set, get) => ({
     sessions: {},
 
     startPreview: async (projectId) => {
+        const inFlight = inFlightPreviewStarts.get(projectId);
+        if (inFlight) return inFlight;
+
         const previous = get().sessions[projectId] ?? idleSession(projectId);
-        set((state) => ({
-            sessions: {
-                ...state.sessions,
-                [projectId]: {
+        const request = (async () => {
+            set((state) => ({
+                sessions: {
+                    ...state.sessions,
+                    [projectId]: {
+                        ...previous,
+                        status: 'building',
+                        error: null,
+                        updatedAt: new Date().toISOString(),
+                    },
+                },
+            }));
+
+            try {
+                const response = await fetch(
+                    `/api/v1/projects/${encodeURIComponent(projectId)}/preview`,
+                    {
+                        method: 'POST',
+                    },
+                );
+                const payload = (await response.json()) as PreviewApiResponse;
+                if (!response.ok || !payload.data) {
+                    throw new Error(payload.message || 'The project preview could not be started');
+                }
+
+                const next: PreviewSession = {
+                    ...payload.data,
+                    revision: previous.revision + 1,
+                };
+                set((state) => ({
+                    sessions: { ...state.sessions, [projectId]: next },
+                }));
+                return next;
+            } catch (error) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : 'The project preview could not be started';
+                const failed: PreviewSession = {
                     ...previous,
-                    status: 'building',
-                    error: null,
+                    status: 'error',
+                    error: message,
                     updatedAt: new Date().toISOString(),
-                },
-            },
-        }));
-
-        try {
-            const response = await fetch(
-                `/api/v1/projects/${encodeURIComponent(projectId)}/preview`,
-                {
-                    method: 'POST',
-                },
-            );
-            const payload = (await response.json()) as PreviewApiResponse;
-            if (!response.ok || !payload.data) {
-                throw new Error(payload.message || 'The project preview could not be started');
+                };
+                set((state) => ({
+                    sessions: { ...state.sessions, [projectId]: failed },
+                }));
+                throw error;
             }
+        })();
 
-            const next: PreviewSession = {
-                ...payload.data,
-                revision: previous.revision + 1,
-            };
-            set((state) => ({
-                sessions: { ...state.sessions, [projectId]: next },
-            }));
-            return next;
-        } catch (error) {
-            const message =
-                error instanceof Error ? error.message : 'The project preview could not be started';
-            const failed: PreviewSession = {
-                ...previous,
-                status: 'error',
-                error: message,
-                updatedAt: new Date().toISOString(),
-            };
-            set((state) => ({
-                sessions: { ...state.sessions, [projectId]: failed },
-            }));
-            throw error;
+        inFlightPreviewStarts.set(projectId, request);
+        try {
+            return await request;
+        } finally {
+            if (inFlightPreviewStarts.get(projectId) === request) {
+                inFlightPreviewStarts.delete(projectId);
+            }
         }
     },
 

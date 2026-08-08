@@ -23,5 +23,6 @@ Generation rules:
 - Do not call finish_project in the same model turn that writes files. Use the next turn to review the implementation against the plan and request, repair omissions, and only then finish.
 - If finish_project reports quality issues, repair every reported issue together in the next write_files call. Do not make one repair per turn or repeat an unchanged file.
 - Call finish_project exactly once after the runnable project passes its quality review.
+- Write the finish_project summary as a polished product handoff in two or three sentences. Name the delivered experience, describe its important user-facing workflows or game systems, and state that the complete project is ready for interactive preview and further refinement. Do not mention model rounds, tools, providers, quotas, or internal implementation phases.
 
 Do not merely explain what you would build. Build it with tools.`;

@@ -9,7 +9,7 @@ import CodeEditor from '../code/CodeEditor';
 import BuilderLoader from './BuilderLoader';
 import { CSSProperties, JSX, useEffect, useRef, useState } from 'react';
 import { useCodeEditor } from '@/src/store/code/useCodeEditor';
-import { SidePanelValues } from '../code/EditorSidePanel';
+import { SidePanelValues } from '@/src/types/side-panel';
 import Terminal from '../code/Terminal';
 import { useWebSocket } from '@/src/hooks/useWebSocket';
 import { useTerminalLogStore } from '@/src/store/code/useTerminalLogStore';
@@ -29,6 +29,7 @@ import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import { cn } from '@/src/lib/utils';
 import { shouldEnableDevAccessClient } from '@/src/lib/runtime-mode';
 import { useParams } from 'next/navigation';
+import { PHASE_TYPES } from '@/src/types/stream_event_types';
 
 const PROJECT_PANEL_WIDTH_STORAGE_KEY = 'blackin.playground.projectPanelWidth';
 const CHAT_PANEL_WIDTH_STORAGE_KEY = 'blackin.playground.chatPanelWidth';
@@ -84,7 +85,8 @@ export default function BuilderDashboard(): JSX.Element {
     const contract = useCurrentContract();
     const params = useParams();
     const contractId = params?.contractId as string | undefined;
-    const { loading } = contract;
+    const { loading, phase } = contract;
+    const showProcessing = loading && phase !== PHASE_TYPES.COMPLETE;
     const { collapseChat, livePreviewFilePath } = useCodeEditor();
     const activePanel = useSidePanelStore((state) => state.currentState);
     const { isConnected, subscribeToHandler } = useWebSocket();
@@ -256,7 +258,11 @@ export default function BuilderDashboard(): JSX.Element {
                         )}
                     >
                         <div className="playground-main-panel relative z-10 h-full min-h-0 w-full overflow-hidden border-0 bg-transparent sm:rounded-[16px] sm:border sm:border-neutral-800/90 sm:bg-[#08090a]">
-                            {loading && !livePreviewFilePath ? <BuilderLoader /> : <Editing />}
+                            {showProcessing && !livePreviewFilePath ? (
+                                <BuilderLoader />
+                            ) : (
+                                <Editing />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -265,7 +271,7 @@ export default function BuilderDashboard(): JSX.Element {
             {collapseChat && (
                 <div className="hidden sm:flex sm:flex-1 pt-0 pb-4 px-4 h-full min-h-0 min-w-0">
                     <div className="playground-main-panel w-full h-full min-h-0 z-10 relative border-0 rounded-none overflow-visible bg-transparent">
-                        {loading && !livePreviewFilePath ? <BuilderLoader /> : <Editing />}
+                        {showProcessing && !livePreviewFilePath ? <BuilderLoader /> : <Editing />}
                     </div>
                 </div>
             )}

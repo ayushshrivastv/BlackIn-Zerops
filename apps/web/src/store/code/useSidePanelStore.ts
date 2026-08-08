@@ -3,7 +3,7 @@
  * © 2026 ayushshrivastv
  */
 
-import { SidePanelValues } from '@/src/components/code/EditorSidePanel';
+import { SidePanelValues } from '@/src/types/side-panel';
 import { create } from 'zustand';
 
 interface SidePanelState {
@@ -11,7 +11,6 @@ interface SidePanelState {
     setCurrentState: (value: SidePanelValues) => void;
 }
 
-// use SidePanelValues and remove string
 export const useSidePanelStore = create<SidePanelState>((set) => ({
     currentState: SidePanelValues.FILE,
     setCurrentState: (value: SidePanelValues) => set({ currentState: value }),

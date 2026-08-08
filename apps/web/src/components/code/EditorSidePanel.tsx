@@ -6,14 +6,7 @@ import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
 import { cn } from '@/src/lib/utils';
 import { MdHomeFilled } from 'react-icons/md';
 import { ClipboardList, MessageSquareText, MonitorPlay } from 'lucide-react';
-
-export enum SidePanelValues {
-    FILE = 'FILE',
-    GITHUB = 'GITHUB',
-    CHAT = 'CHAT',
-    PLAN = 'PLAN',
-    PREVIEW = 'PREVIEW',
-}
+import { SidePanelValues } from '@/src/types/side-panel';
 
 interface EditorSidePanelProps {
     className?: string;

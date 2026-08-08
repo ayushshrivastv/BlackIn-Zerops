@@ -14,6 +14,7 @@ import useGenerate from '@/src/hooks/useGenerate';
 import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import Playground from '@/src/lib/server/playground';
 import BuilderChatSkeletons from './BuilderChatSkeletons';
+import { completeProjectHandoff } from '@/src/lib/project-handoff';
 
 export default function BuilderChats() {
     const params = useParams();
@@ -48,7 +49,11 @@ export default function BuilderChats() {
         async function fetchChats() {
             if (contract.loading || hasLocalMessages) return;
             setChatLoading(true);
-            await Playground.get_chat(contractId);
+            const hydration = await Playground.get_chat(contractId);
+            if (hydration.generationState === 'complete' && hydration.hasFiles) {
+                hasInitialized.current = true;
+                completeProjectHandoff(contractId);
+            }
             setChatLoading(false);
         }
         fetchChats();
@@ -59,6 +64,14 @@ export default function BuilderChats() {
             return;
         }
         if (!messages || messages.length === 0) return;
+        const hasTerminalResponse = messages.some(
+            (message) =>
+                message.stage === 'ERROR' || (message.role === 'AI' && message.stage === 'END'),
+        );
+        if (hasTerminalResponse) {
+            hasInitialized.current = true;
+            return;
+        }
         if (messages.length <= 2 && messages[0].contractId === contractId) {
             hasInitialized.current = true;
             if (activeTemplate) {

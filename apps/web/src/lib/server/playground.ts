@@ -17,8 +17,13 @@ interface PersistedMessage {
     createdAt: string | Date;
 }
 
+export interface ChatHydrationResult {
+    generationState: PersistedGenerationState;
+    hasFiles: boolean;
+}
+
 export default class Playground {
-    static async get_chat(contractId: string) {
+    static async get_chat(contractId: string): Promise<ChatHydrationResult> {
         const { upsertMessage } = useBuilderChatStore.getState();
         const { parseFileStructure, setCollapseFileTree } = useCodeEditor.getState();
         try {
@@ -33,13 +38,19 @@ export default class Playground {
             for (let i = 0; i < sortedMessages.length; i++) {
                 upsertMessage(sortedMessages[i]);
             }
-            const parsedFiles = JSON.parse(data.data.contractFiles || data.data.templateFiles);
-            if (parsedFiles) {
+            const serializedFiles = data.data.contractFiles || data.data.templateFiles;
+            const parsedFiles = serializedFiles ? JSON.parse(serializedFiles) : [];
+            if (Array.isArray(parsedFiles) && parsedFiles.length > 0) {
                 parseFileStructure(parsedFiles);
             }
             setCollapseFileTree(true);
+            return {
+                generationState: getPersistedGenerationState(sortedMessages),
+                hasFiles: Array.isArray(parsedFiles) && parsedFiles.length > 0,
+            };
         } catch (error) {
             console.error('Error while fetching chats from server: ', error);
+            return { generationState: 'pending', hasFiles: false };
         }
     }
 

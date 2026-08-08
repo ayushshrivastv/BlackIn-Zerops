@@ -39,10 +39,8 @@ import {
 import { toast } from 'sonner';
 import { ChatRole, STAGE } from '@lighthouse/types';
 import { isPreviewCommand } from '@/src/lib/preview-command';
-import { usePreviewStore } from '@/src/store/code/usePreviewStore';
-import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
-import { SidePanelValues } from '../code/EditorSidePanel';
 import { useCodeEditor } from '@/src/store/code/useCodeEditor';
+import { openProjectPreview } from '@/src/lib/project-handoff';
 
 interface AttachmentItem {
     id: string;
@@ -88,8 +86,6 @@ export default function BuilderChatInput() {
         showRegenerateTime,
     } = useLimitStore();
     const { theme } = usePlaygroundThemeStore();
-    const startPreview = usePreviewStore((state) => state.startPreview);
-    const setCurrentPanel = useSidePanelStore((state) => state.setCurrentState);
     const shouldEnforceLimits = !shouldEnableDevAccessClient();
 
     const borderGradientColors =
@@ -250,9 +246,8 @@ export default function BuilderChatInput() {
             });
             pendingSubmissionValueRef.current = null;
             setInputValue('');
-            setCurrentPanel(SidePanelValues.PREVIEW);
             try {
-                await startPreview(contractId);
+                await openProjectPreview(contractId);
                 setMessage({
                     id: uuid(),
                     contractId,

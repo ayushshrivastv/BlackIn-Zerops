@@ -127,13 +127,19 @@ export const useBuilderChatStore = create<BuilderChatState>((set, get) => ({
     setPhase: (phase) => {
         const { contracts, currentContractId } = get();
         if (!currentContractId) return;
+        const currentContract = contracts[currentContractId] || getDefaultContractState();
+        const isComplete = phase === 'COMPLETE';
 
         set({
             contracts: {
                 ...contracts,
                 [currentContractId]: {
-                    ...contracts[currentContractId],
+                    ...currentContract,
                     phase,
+                    loading: isComplete ? false : currentContract.loading,
+                    loadingStartedAt: isComplete ? null : currentContract.loadingStartedAt,
+                    activity: isComplete ? '' : currentContract.activity,
+                    currentFileEditing: isComplete ? null : currentContract.currentFileEditing,
                 },
             },
         });

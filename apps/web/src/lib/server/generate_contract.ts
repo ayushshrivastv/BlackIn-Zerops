@@ -21,6 +21,7 @@ import { shouldEnableDevAccessClient } from '../runtime-mode';
 import { toast } from 'sonner';
 import Playground from './playground';
 import { usePreviewStore } from '@/src/store/code/usePreviewStore';
+import { completeProjectHandoff } from '@/src/lib/project-handoff';
 
 const inFlightGenerationContracts = new Set<string>();
 
@@ -180,12 +181,16 @@ export default class GenerateContract {
                 if (state === 'pending' || streamSettled) return false;
                 streamSettled = true;
                 await Playground.get_chat(contractId);
+                if (state === 'complete') {
+                    completeProjectHandoff(contractId);
+                    return true;
+                }
                 clearLivePreview();
                 setCurrentFileEditing(null);
                 setActivity('');
                 setLoading(false);
                 setCollapseFileTree(true);
-                setPhase(state === 'complete' ? PHASE_TYPES.COMPLETE : PHASE_TYPES.ERROR);
+                setPhase(PHASE_TYPES.ERROR);
                 return true;
             };
 
@@ -312,12 +317,7 @@ export default class GenerateContract {
                                         upsertMessage(event.systemMessage);
                                     }
                                     parseFileStructure(event.data.data as FileContent[]);
-                                    clearLivePreview();
-                                    setCurrentFileEditing(null);
-                                    setPhase(PHASE_TYPES.COMPLETE);
-                                    setActivity('');
-                                    setLoading(false);
-                                    setCollapseFileTree(true);
+                                    completeProjectHandoff(contractId);
                                 }
                                 break;
 
@@ -336,10 +336,7 @@ export default class GenerateContract {
             const persistedState = await Playground.get_generation_state(contractId, messageId);
             if (!(await applyPersistedState(persistedState)) && !streamSettled) {
                 await Playground.get_chat(contractId);
-                setCurrentFileEditing(null);
-                setActivity('');
-                setPhase(PHASE_TYPES.COMPLETE);
-                setCollapseFileTree(true);
+                completeProjectHandoff(contractId);
             }
         } catch (error) {
             console.error('Chat stream error:', error);
@@ -359,15 +356,11 @@ export default class GenerateContract {
     ): Promise<void> {
         const { setLoading, upsertMessage, setPhase, setActivity, setCurrentFileEditing } =
             useBuilderChatStore.getState();
-        const {
-            deleteFile,
-            parseFileStructure,
-            setCollapseFileTree,
-            setLivePreview,
-            clearLivePreview,
-        } = useCodeEditor.getState();
+        const { deleteFile, parseFileStructure, setLivePreview, clearLivePreview } =
+            useCodeEditor.getState();
         const { setShowMessageLimit, setShowContractLimit, setShowRegenerateTime } =
             useLimitStore.getState();
+        let reconciliationTimer: ReturnType<typeof setInterval> | null = null;
 
         try {
             if (inFlightGenerationContracts.has(contractId)) {
@@ -452,6 +445,39 @@ export default class GenerateContract {
             }
 
             let buffer = '';
+            let streamSettled = false;
+            let reconciliationInFlight = false;
+
+            const applyPersistedState = async (state: 'pending' | 'complete' | 'error') => {
+                if (state === 'pending' || streamSettled) return false;
+                streamSettled = true;
+                await Playground.get_chat(contractId);
+                if (state === 'complete') {
+                    completeProjectHandoff(contractId);
+                } else {
+                    setActivity('');
+                    setLoading(false);
+                    setPhase(PHASE_TYPES.ERROR);
+                }
+                return true;
+            };
+
+            const reconcilePersistedState = async () => {
+                if (streamSettled || reconciliationInFlight) return;
+                reconciliationInFlight = true;
+                try {
+                    const state = await Playground.get_generation_state(contractId);
+                    if (await applyPersistedState(state)) {
+                        await reader.cancel().catch(() => undefined);
+                    }
+                } finally {
+                    reconciliationInFlight = false;
+                }
+            };
+
+            reconciliationTimer = setInterval(() => {
+                void reconcilePersistedState();
+            }, 5_000);
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -526,6 +552,7 @@ export default class GenerateContract {
                                 break;
 
                             case PHASE_TYPES.ERROR:
+                                streamSettled = true;
                                 if (hasStreamErrorDetails(event.data)) {
                                     console.warn('LLM stream warning:', event.data);
                                 }
@@ -543,6 +570,7 @@ export default class GenerateContract {
                                 break;
 
                             case STAGE.ERROR:
+                                streamSettled = true;
                                 setPhase(STAGE.ERROR);
                                 setLoading(false);
                                 toast.error(
@@ -558,16 +586,12 @@ export default class GenerateContract {
 
                             case STAGE.END:
                                 if ('data' in event.data && event.data.data) {
+                                    streamSettled = true;
                                     if (event.systemMessage) {
                                         upsertMessage(event.systemMessage);
                                     }
                                     parseFileStructure(event.data.data as FileContent[]);
-                                    clearLivePreview();
-                                    setCurrentFileEditing(null);
-                                    setPhase(PHASE_TYPES.COMPLETE);
-                                    setActivity('');
-                                    setLoading(false);
-                                    setCollapseFileTree(true);
+                                    completeProjectHandoff(contractId);
                                 }
                                 break;
 
@@ -580,10 +604,11 @@ export default class GenerateContract {
                 }
             }
 
-            await Playground.get_chat(contractId);
-            setCurrentFileEditing(null);
-            setPhase(PHASE_TYPES.COMPLETE);
-            setCollapseFileTree(true);
+            const persistedState = await Playground.get_generation_state(contractId);
+            if (!(await applyPersistedState(persistedState)) && !streamSettled) {
+                await Playground.get_chat(contractId);
+                completeProjectHandoff(contractId);
+            }
         } catch (error) {
             console.error('Chat stream error:', error);
             toast.error(error instanceof Error ? error.message : 'Generation request failed');
@@ -591,6 +616,7 @@ export default class GenerateContract {
                 onError(error as Error);
             }
         } finally {
+            if (reconciliationTimer) clearInterval(reconciliationTimer);
             inFlightGenerationContracts.delete(contractId);
             setLoading(false);
         }

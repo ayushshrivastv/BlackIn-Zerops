@@ -7,7 +7,7 @@ import { JSX, useState } from 'react';
 import PlanExecutorPanel from './PlanExecutorPanel';
 import { useExecutorStore } from '@/src/store/model/useExecutorStore';
 import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
-import { SidePanelValues } from './EditorSidePanel';
+import { SidePanelValues } from '@/src/types/side-panel';
 
 export default function PlanPanel(): JSX.Element {
     const [collapsePanel, setCollapsePanel] = useState<boolean>(false);
