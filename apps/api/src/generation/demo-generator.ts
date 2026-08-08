@@ -6,14 +6,26 @@ export class DemoProjectGenerator implements ProjectGenerator {
   readonly model = 'local-template';
 
   async generate(input: GeneratorInput): Promise<GeneratedProject> {
+    await input.onProgress?.({
+      stage: 'PLANNING',
+      message: 'Planning the product structure, interactions, and visual direction',
+    });
     const workspace = new VirtualWorkspace(input.existingFiles, input.onFileChange);
     const title = deriveProjectTitle(input.instruction);
     const description = input.instruction.trim().replace(/\s+/g, ' ').slice(0, 220);
 
+    await input.onProgress?.({
+      stage: 'GENERATING_CODE',
+      message: 'Building the responsive application and its core interactions',
+    });
     for (const file of createDemoFiles(title, description)) {
       await workspace.write(file.path, file.content);
     }
 
+    await input.onProgress?.({
+      stage: 'BUILDING',
+      message: 'Reviewing the generated files against the request',
+    });
     const files = workspace.toFiles();
     validateGeneratedProject(files);
 

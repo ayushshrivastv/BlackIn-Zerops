@@ -22,6 +22,7 @@ export class GenerationService {
     projectId: string,
     instruction: string,
     writeEvent: StreamEventWriter,
+    messageId?: string,
   ): Promise<void> {
     if (this.activeProjects.has(projectId)) {
       throw new GenerationInProgressError('This project is already being generated');
@@ -30,7 +31,7 @@ export class GenerationService {
 
     const now = new Date().toISOString();
     const existing = await this.store.get(projectId);
-    const userMessage = createMessage(projectId, 'USER', instruction, 'START');
+    const userMessage = createMessage(projectId, 'USER', instruction, 'START', messageId ? { id: messageId } : {});
     const project: ProjectRecord = existing ?? {
       id: projectId,
       title: 'Untitled project',
@@ -50,7 +51,9 @@ export class GenerationService {
     project.model = this.generator.model;
     project.status = 'GENERATING';
     project.updatedAt = now;
-    project.messages.push(userMessage);
+    if (!project.messages.some((message) => message.id === userMessage.id)) {
+      project.messages.push(userMessage);
+    }
     await this.store.save(project);
 
     try {
@@ -58,13 +61,15 @@ export class GenerationService {
       await writeEvent(
         createStreamEvent(
           'STARTING',
-          { stage: 'starting', contractId: projectId, messageId: startingMessage.id },
+          {
+            stage: 'starting',
+            contractId: projectId,
+            messageId: startingMessage.id,
+          },
           startingMessage,
         ),
       );
-      await writeEvent(
-        createStreamEvent('CONTEXT', { context: instruction, llmMessage: userMessage }, userMessage),
-      );
+      await writeEvent(createStreamEvent('CONTEXT', { context: instruction, llmMessage: userMessage }, userMessage));
       await this.writeStage(projectId, 'PLANNING', 'Planning the application structure', writeEvent);
       await this.writeStage(projectId, 'GENERATING_CODE', 'Generating the project files', writeEvent);
 
@@ -72,6 +77,9 @@ export class GenerationService {
         projectId,
         instruction,
         existingFiles: project.files,
+        onProgress: async (progress) => {
+          await this.writeStage(projectId, progress.stage, progress.message, writeEvent);
+        },
         onFileChange: async (change) => {
           const editingMessage = createMessage(
             projectId,

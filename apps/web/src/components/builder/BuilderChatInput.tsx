@@ -68,6 +68,7 @@ export default function BuilderChatInput() {
     const [selectedModel, setSelectedModel] = useState<ModelOption>(DEFAULT_MODEL_OPTION);
     const pendingAutofillSubmitRef = useRef(false);
     const pendingSubmissionValueRef = useRef<string | null>(null);
+    const submissionInFlightRef = useRef(false);
     const [openByokModal, setOpenByokModal] = useState(false);
 
     // Get contract-specific data
@@ -124,6 +125,12 @@ export default function BuilderChatInput() {
     useEffect(() => {
         setSelectedModel(mapEnumToModelOption(contract.selectedModel));
     }, [contract.selectedModel]);
+
+    useEffect(() => {
+        if (!contract.loading) {
+            submissionInFlightRef.current = false;
+        }
+    }, [contract.loading]);
 
     useEffect(() => {
         let cancelled = false;
@@ -210,7 +217,7 @@ export default function BuilderChatInput() {
     }
 
     async function handleSubmit() {
-        if (contract.loading) {
+        if (contract.loading || submissionInFlightRef.current) {
             return;
         }
         const submittedValue = pendingSubmissionValueRef.current?.trim() || inputValue.trim();
@@ -225,6 +232,7 @@ export default function BuilderChatInput() {
             setOpenByokModal(true);
             return;
         }
+        submissionInFlightRef.current = true;
         if (
             attachments.length === 0 &&
             useCodeEditor.getState().fileTree.length > 0 &&
@@ -268,14 +276,16 @@ export default function BuilderChatInput() {
                     createdAt: new Date(),
                 });
                 toast.error(message);
+            } finally {
+                submissionInFlightRef.current = false;
             }
             return;
         }
         const selectedModelEnum = mapModelOptionToEnum(selectedModel);
         const hasExistingContractMessages = contract.messages.length > 0;
-        set_states(
+        const messageId = set_states(
             contractId,
-            inputValue.trim(),
+            submittedValue,
             contract.activeTemplate?.id,
             undefined,
             {
@@ -291,6 +301,7 @@ export default function BuilderChatInput() {
                 submittedValue,
                 contract.activeTemplate?.id,
                 selectedModelEnum,
+                messageId ?? undefined,
             );
         }
         pendingSubmissionValueRef.current = null;

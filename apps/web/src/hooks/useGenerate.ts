@@ -36,7 +36,7 @@ export default function useGenerate() {
         template?: Template,
         options?: SetStatesOptions,
         generationOptions?: GenerationOptions,
-    ) {
+    ): string | null {
         const {
             setCurrentContractId,
             setMessage,
@@ -54,11 +54,14 @@ export default function useGenerate() {
             setActiveTemplate(template);
         }
 
+        let userMessageId: string | null = null;
+
         // Add messages
         if (templateId && template) {
             if (instruction) {
+                userMessageId = uuid();
                 setMessage({
-                    id: uuid(),
+                    id: userMessageId,
                     contractId: contractId,
                     role: ChatRole.USER,
                     content: instruction,
@@ -79,8 +82,9 @@ export default function useGenerate() {
                 createdAt: new Date(),
             });
         } else if (instruction) {
+            userMessageId = uuid();
             setMessage({
-                id: uuid(),
+                id: userMessageId,
                 contractId: contractId,
                 role: ChatRole.USER,
                 content: instruction,
@@ -92,6 +96,7 @@ export default function useGenerate() {
         }
 
         router.push(`/playground/${contractId}`);
+        return userMessageId;
     }
 
     function handleGeneration(
@@ -99,6 +104,7 @@ export default function useGenerate() {
         instruction?: string,
         templateId?: string,
         model?: MODEL,
+        messageId?: string,
         byok?: ByokPayload,
     ) {
         const { setLoading } = useBuilderChatStore.getState();
@@ -116,6 +122,7 @@ export default function useGenerate() {
             templateId,
             selectedModel,
             resolvedByok,
+            messageId,
         );
     }
 

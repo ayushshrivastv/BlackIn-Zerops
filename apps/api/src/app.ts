@@ -18,6 +18,7 @@ const generateBodySchema = z.object({
   contract_id: projectIdSchema,
   instruction: z.string().trim().min(1).max(20_000).optional(),
   template_id: z.string().max(128).optional(),
+  message_id: z.string().uuid().optional(),
 });
 const chatBodySchema = z.object({ contractId: projectIdSchema });
 const syncFilesBodySchema = z.object({
@@ -129,7 +130,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     heartbeat.unref();
 
     try {
-      await generationService.generate(body.contract_id, instruction, writeEvent);
+      await generationService.generate(body.contract_id, instruction, writeEvent, body.message_id);
     } catch (error) {
       const message = error instanceof GenerationInProgressError || error instanceof Error ? error.message : 'Generation failed';
       await writeEvent({

@@ -28,12 +28,14 @@ describe('generation API', () => {
 
   it('generates, streams, persists, and exports a project from one prompt', async () => {
     const projectId = 'test-project-1';
+    const messageId = '8d2c9492-bf33-4240-af80-f113847ff26e';
     const generation = await app.inject({
       method: 'POST',
       url: '/api/v1/generate',
       payload: {
         contract_id: projectId,
         instruction: 'Build a customer feedback portal for a small design agency',
+        message_id: messageId,
       },
     });
 
@@ -44,6 +46,8 @@ describe('generation API', () => {
       .filter(Boolean)
       .map((line) => JSON.parse(line) as { type: string; data: Record<string, unknown> });
     expect(events.some((event) => event.type === 'EDITING_FILE')).toBe(true);
+    expect(events.filter((event) => event.type === 'PLANNING').length).toBeGreaterThanOrEqual(2);
+    expect(events.some((event) => event.type === 'BUILDING')).toBe(true);
     expect(events.at(-1)?.type).toBe('END');
     expect(Array.isArray(events.at(-1)?.data.data)).toBe(true);
 
@@ -57,7 +61,12 @@ describe('generation API', () => {
       data: { messages: unknown[]; contractFiles: string };
     }>();
     expect(chatBody.data.messages.length).toBeGreaterThanOrEqual(2);
-    expect(JSON.parse(chatBody.data.contractFiles)).toEqual(expect.arrayContaining([expect.objectContaining({ path: 'package.json' })]));
+    expect(chatBody.data.messages).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: messageId, role: 'USER' })]),
+    );
+    expect(JSON.parse(chatBody.data.contractFiles)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'package.json' })]),
+    );
 
     const archive = await app.inject({
       method: 'POST',
@@ -67,6 +76,27 @@ describe('generation API', () => {
     expect(archive.statusCode).toBe(200);
     expect(archive.headers['content-type']).toContain('application/zip');
     expect(archive.rawPayload.byteLength).toBeGreaterThan(100);
+  });
+
+  it('stores a client message once when a generation request is retried', async () => {
+    const projectId = 'idempotent-message-project';
+    const messageId = '8762afb0-d646-48f5-b9ec-1ded6cc97ce0';
+    const payload = {
+      contract_id: projectId,
+      instruction: 'Build a responsive project tracker',
+      message_id: messageId,
+    };
+
+    await app.inject({ method: 'POST', url: '/api/v1/generate', payload });
+    await app.inject({ method: 'POST', url: '/api/v1/generate', payload });
+
+    const chat = await app.inject({
+      method: 'POST',
+      url: '/api/v1/contract/get-chat',
+      payload: { contractId: projectId },
+    });
+    const messages = chat.json<{ data: { messages: Array<{ id: string; role: string }> } }>().data.messages;
+    expect(messages.filter((message) => message.id === messageId && message.role === 'USER')).toHaveLength(1);
   });
 
   it('lists and deletes stored projects', async () => {
@@ -212,5 +242,77 @@ describe('generation API', () => {
     });
     expect(started.statusCode).toBe(422);
     expect(started.json<{ message: string }>().message).toContain('express');
+  });
+
+  it('builds browser games with Phaser inside the controlled preview runtime', async () => {
+    const projectId = 'phaser-preview';
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: {
+        contract_id: projectId,
+        instruction: 'Build a browser game',
+      },
+    });
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/files/sync',
+      payload: {
+        contractId: projectId,
+        files: [
+          {
+            path: 'package.json',
+            content: JSON.stringify({
+              scripts: { dev: 'next dev', build: 'next build' },
+              dependencies: {
+                next: '15.5.9',
+                phaser: '^3.90.0',
+                react: '19.1.0',
+                'react-dom': '19.1.0',
+              },
+            }),
+          },
+          {
+            path: 'app/page.tsx',
+            content: `
+'use client';
+import { useEffect, useRef } from 'react';
+
+export default function GamePage() {
+  const gameHost = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let game: { destroy: (removeCanvas: boolean) => void } | undefined;
+    let disposed = false;
+    void import('phaser').then(({ default: Phaser }) => {
+      if (disposed || !gameHost.current) return;
+      game = new Phaser.Game({
+        type: Phaser.AUTO,
+        width: 640,
+        height: 360,
+        parent: gameHost.current,
+        scene: { create() { this.add.text(24, 24, 'Phaser preview ready'); } },
+      });
+    });
+    return () => { disposed = true; game?.destroy(true); };
+  }, []);
+  return <main><div ref={gameHost} /></main>;
+}
+`,
+          },
+        ],
+      },
+    });
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(started.statusCode, started.body).toBe(200);
+    const preview = await app.inject({
+      method: 'GET',
+      url: `/api/v1/previews/${projectId}`,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.body).toContain('Phaser preview ready');
   });
 });

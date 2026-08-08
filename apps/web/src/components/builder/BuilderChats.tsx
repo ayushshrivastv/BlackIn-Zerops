@@ -62,17 +62,17 @@ export default function BuilderChats() {
         if (messages.length <= 2 && messages[0].contractId === contractId) {
             hasInitialized.current = true;
             if (activeTemplate) {
-                startChat(messages[0].content, activeTemplate.id);
+                startChat(messages[0].content, activeTemplate.id, messages[0].id);
             } else {
-                startChat(messages[0].content);
+                startChat(messages[0].content, undefined, messages[0].id);
             }
             setContractId(contractId);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [contractId, messages.length]);
 
-    async function startChat(instruction: string, template_id?: string) {
-        handleGeneration(contractId, instruction, template_id);
+    async function startChat(instruction: string, template_id?: string, messageId?: string) {
+        handleGeneration(contractId, instruction, template_id, undefined, messageId);
         if (activeTemplate) resetTemplate();
     }
 

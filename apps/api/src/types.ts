@@ -46,6 +46,7 @@ export interface GenerationRequest {
   contractId: string;
   instruction: string;
   templateId?: string;
+  messageId?: string;
 }
 
 export interface GenerationMetadata {
@@ -65,6 +66,12 @@ export interface GeneratorInput {
   instruction: string;
   existingFiles: ProjectFile[];
   onFileChange: (change: FileChange) => Promise<void> | void;
+  onProgress?: (progress: GenerationProgress) => Promise<void> | void;
+}
+
+export interface GenerationProgress {
+  stage: 'PLANNING' | 'GENERATING_CODE' | 'BUILDING' | 'FINALIZING';
+  message: string;
 }
 
 export interface FileChange {

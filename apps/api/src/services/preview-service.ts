@@ -6,7 +6,7 @@ import type { ProjectFile } from '../types.js';
 
 const require = createRequire(import.meta.url);
 const MAX_PREVIEW_SOURCE_BYTES = 3_000_000;
-const ALLOWED_PACKAGES = new Set(['lucide-react', 'react', 'react-dom', 'react-dom/client', 'react/jsx-dev-runtime', 'react/jsx-runtime']);
+const ALLOWED_PACKAGES = new Set(['lucide-react', 'phaser', 'react', 'react-dom', 'react-dom/client', 'react/jsx-dev-runtime', 'react/jsx-runtime']);
 const NEXT_STUBS = new Set(['next/head', 'next/image', 'next/link', 'next/navigation']);
 const ENTRY_CANDIDATES = ['app/page.tsx', 'src/app/page.tsx', 'src/main.tsx', 'src/main.jsx', 'src/App.tsx', 'src/App.jsx'];
 const GLOBAL_STYLE_CANDIDATES = ['app/globals.css', 'src/app/globals.css', 'src/index.css', 'src/App.css', 'styles/globals.css', 'style.css'];
@@ -270,6 +270,9 @@ function resolveAllowedPackage(packagePath: string) {
   const packageName = packagePath.startsWith('@') ? packagePath.split('/').slice(0, 2).join('/') : packagePath.split('/')[0];
   if (!ALLOWED_PACKAGES.has(packagePath) && !ALLOWED_PACKAGES.has(packageName)) {
     throw new PreviewBuildError(`Preview dependency ${packageName} is not in the controlled runtime`);
+  }
+  if (packagePath === 'phaser') {
+    return { path: require.resolve('phaser/dist/phaser.esm.js') };
   }
   return { path: require.resolve(packagePath) };
 }

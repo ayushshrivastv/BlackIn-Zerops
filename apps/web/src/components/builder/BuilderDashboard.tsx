@@ -7,7 +7,7 @@
 import BuilderChats from './BuilderChats';
 import CodeEditor from '../code/CodeEditor';
 import BuilderLoader from './BuilderLoader';
-import { JSX, useEffect, useRef, useState } from 'react';
+import { CSSProperties, JSX, useEffect, useRef, useState } from 'react';
 import { useCodeEditor } from '@/src/store/code/useCodeEditor';
 import { SidePanelValues } from '../code/EditorSidePanel';
 import Terminal from '../code/Terminal';
@@ -231,28 +231,35 @@ export default function BuilderDashboard(): JSX.Element {
     return (
         <div className="playground-builder-dashboard w-full h-full flex flex-row bg-black z-0 overflow-hidden">
             {!collapseChat && (
-                <>
-                    <div className="w-full h-full min-h-0 sm:hidden">
-                        {activePanel === SidePanelValues.PREVIEW ? <Editing /> : <BuilderChats />}
+                <div
+                    ref={chatSplitContainerRef}
+                    style={
+                        {
+                            '--chat-panel-width': `${chatPanelWidth}px`,
+                        } as CSSProperties
+                    }
+                    className="flex h-full min-h-0 min-w-0 flex-1"
+                >
+                    <div
+                        className={cn(
+                            'relative h-full min-h-0 w-full sm:w-[var(--chat-panel-width)] sm:shrink-0',
+                            activePanel === SidePanelValues.PREVIEW && 'hidden sm:block',
+                        )}
+                    >
+                        <BuilderChats />
+                        <EdgeResizeHandle side="right" onMouseDown={handleChatResizeStart} />
                     </div>
                     <div
-                        ref={chatSplitContainerRef}
-                        className="hidden sm:flex sm:flex-1 h-full min-h-0 min-w-0"
+                        className={cn(
+                            'flex h-full min-h-0 min-w-0 flex-1 sm:pb-4 sm:pr-4',
+                            activePanel !== SidePanelValues.PREVIEW && 'hidden sm:flex',
+                        )}
                     >
-                        <div
-                            className="relative h-full min-h-0"
-                            style={{ width: `${chatPanelWidth}px` }}
-                        >
-                            <BuilderChats />
-                            <EdgeResizeHandle side="right" onMouseDown={handleChatResizeStart} />
-                        </div>
-                        <div className="flex flex-1 pt-0 pb-4 pr-4 pl-0 h-full min-h-0 min-w-0">
-                            <div className="playground-main-panel w-full h-full min-h-0 z-10 relative border border-neutral-800/90 rounded-[16px] overflow-hidden bg-[#08090a]">
-                                {loading && !livePreviewFilePath ? <BuilderLoader /> : <Editing />}
-                            </div>
+                        <div className="playground-main-panel relative z-10 h-full min-h-0 w-full overflow-hidden border-0 bg-transparent sm:rounded-[16px] sm:border sm:border-neutral-800/90 sm:bg-[#08090a]">
+                            {loading && !livePreviewFilePath ? <BuilderLoader /> : <Editing />}
                         </div>
                     </div>
-                </>
+                </div>
             )}
 
             {collapseChat && (
@@ -414,7 +421,7 @@ function EdgeResizeHandle({ side, onMouseDown }: EdgeResizeHandleProps) {
             aria-label="Resize panels"
             onMouseDown={onMouseDown}
             className={cn(
-                'group absolute top-0 bottom-0 z-20 w-4 cursor-col-resize touch-none',
+                'group absolute top-0 bottom-0 z-20 hidden w-4 cursor-col-resize touch-none sm:block',
                 side === 'left' ? '-left-2' : '-right-2',
             )}
         >

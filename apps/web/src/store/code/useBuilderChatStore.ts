@@ -9,6 +9,7 @@ import { create } from 'zustand';
 interface ContractState {
     messages: Message[];
     phase: string;
+    activity: string;
     loading: boolean;
     loadingStartedAt: number | null;
     currentFileEditing: string | null;
@@ -25,6 +26,7 @@ interface BuilderChatState {
     setSelectedModel: (model: MODEL, contractId?: string) => void;
     setLoading: (loading: boolean) => void;
     setPhase: (phase: string) => void;
+    setActivity: (activity: string) => void;
     setMessage: (message: Message) => void;
     upsertMessage: (message: Partial<Message> & { id: string }) => void;
     setActiveTemplate: (template: Template | null) => void;
@@ -35,6 +37,7 @@ interface BuilderChatState {
 const getDefaultContractState = (): ContractState => ({
     messages: [],
     phase: '',
+    activity: '',
     loading: false,
     loadingStartedAt: null,
     currentFileEditing: null,
@@ -105,7 +108,7 @@ export const useBuilderChatStore = create<BuilderChatState>((set, get) => ({
         if (!currentContractId) return;
         const currentContract = contracts[currentContractId] || getDefaultContractState();
         const nextLoadingStartedAt = loading
-            ? currentContract.loadingStartedAt ?? Date.now()
+            ? (currentContract.loadingStartedAt ?? Date.now())
             : null;
 
         set({
@@ -115,6 +118,7 @@ export const useBuilderChatStore = create<BuilderChatState>((set, get) => ({
                     ...currentContract,
                     loading,
                     loadingStartedAt: nextLoadingStartedAt,
+                    activity: loading ? currentContract.activity : '',
                 },
             },
         });
@@ -130,6 +134,22 @@ export const useBuilderChatStore = create<BuilderChatState>((set, get) => ({
                 [currentContractId]: {
                     ...contracts[currentContractId],
                     phase,
+                },
+            },
+        });
+    },
+
+    setActivity: (activity) => {
+        const { contracts, currentContractId } = get();
+        if (!currentContractId) return;
+
+        const currentContract = contracts[currentContractId] || getDefaultContractState();
+        set({
+            contracts: {
+                ...contracts,
+                [currentContractId]: {
+                    ...currentContract,
+                    activity,
                 },
             },
         });

@@ -31,7 +31,7 @@ export default function BuilderMessage({
     returnParsedData,
 }: BuilderMessageProps): JSX.Element {
     const contract = useCurrentContract();
-    const { messages } = contract;
+    const { activity, messages } = contract;
     const [collapsePanel, setCollapsePanel] = useState<boolean>(false);
     const { editExeutorPlanPanel, setEditExeutorPlanPanel } = useExecutorStore();
     const { setCollapseFileTree } = useCodeEditor();
@@ -133,10 +133,17 @@ export default function BuilderMessage({
                 <div className="flex justify-start w-full mt-2">
                     <div className="flex items-start gap-x-2 max-w-[86%]">
                         <AppLogo showLogoText={false} size={22} />
-                        <div className="playground-ai-loading-bubble rounded-2xl border border-neutral-800 bg-[#08090a] px-4 py-2 text-left text-[13px] font-normal text-white">
-                            <span className="motion-safe:animate-pulse motion-reduce:opacity-80">
-                                Thinking
-                            </span>
+                        <div
+                            role="status"
+                            aria-live="polite"
+                            aria-busy="true"
+                            className="playground-ai-loading-bubble flex items-center gap-2 rounded-2xl border border-neutral-800 bg-[#08090a] px-4 py-2 text-left text-[13px] font-normal text-white"
+                        >
+                            <span>{activity || 'Thinking'}</span>
+                            <span
+                                aria-hidden="true"
+                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-400 motion-safe:animate-pulse motion-reduce:opacity-80"
+                            />
                         </div>
                     </div>
                 </div>

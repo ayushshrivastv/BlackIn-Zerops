@@ -97,6 +97,7 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
     const plusMenuRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const attachmentsRef = useRef<AttachmentItem[]>([]);
+    const submissionInFlightRef = useRef(false);
 
     const { showMessageLimit, showContractLimit } = useLimitStore();
     const { set_states } = useGenerate();
@@ -140,13 +141,14 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
     }, []);
 
     function handleSubmit() {
-        if (isSubmitting) return;
+        if (isSubmitting || submissionInFlightRef.current) return;
         if (shouldEnforceLimits && (showMessageLimit || showContractLimit)) return;
         if (isByokModelOption(selectedModel) && !getStoredQwenByokConfig()) {
             setOpenByokModal(true);
             return;
         }
 
+        submissionInFlightRef.current = true;
         setIsSubmitting(true);
         const contractId = uuid();
         set_states(

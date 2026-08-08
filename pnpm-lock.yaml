@@ -50,6 +50,9 @@ importers:
       lucide-react:
         specifier: ^0.545.0
         version: 0.545.0(react@19.1.0)
+      phaser:
+        specifier: ^3.90.0
+        version: 3.90.0
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -9129,6 +9132,12 @@ packages:
     resolution:
       {
         integrity: sha512-xCy9V055GLEqoFaHoC1SoLIaLmWctgCUaBaWxDZ7/Zx4CTyX7cJQLJOok/orfjZAh9kEYpjJa4d0KcJmCbctZA==,
+      }
+
+  phaser@3.90.0:
+    resolution:
+      {
+        integrity: sha512-/cziz/5ZIn02uDkC9RzN8VF9x3Gs3XdFFf9nkiMEQT3p7hQlWuyjy4QWosU802qqno2YSLn2BfqwOKLv/sSVfQ==,
       }
 
   picocolors@1.1.1:
@@ -18460,6 +18469,10 @@ snapshots:
   pathe@2.0.3: {}
 
   perfect-debounce@1.0.0: {}
+
+  phaser@3.90.0:
+    dependencies:
+      eventemitter3: 5.0.1
 
   picocolors@1.1.1: {}
 

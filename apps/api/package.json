@@ -19,6 +19,7 @@
     "esbuild": "^0.25.10",
     "fastify": "^5.11.2",
     "lucide-react": "^0.545.0",
+    "phaser": "^3.90.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "^4.1.12"

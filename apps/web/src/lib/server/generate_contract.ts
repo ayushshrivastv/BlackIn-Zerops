@@ -94,8 +94,9 @@ export default class GenerateContract {
         template_id?: string,
         model: MODEL = MODEL.GEMINI,
         byok?: ByokPayload,
+        messageId?: string,
     ): Promise<void> {
-        const { setLoading, upsertMessage, setPhase, setCurrentFileEditing } =
+        const { setLoading, upsertMessage, setPhase, setActivity, setCurrentFileEditing } =
             useBuilderChatStore.getState();
         const {
             deleteFile,
@@ -125,6 +126,7 @@ export default class GenerateContract {
                     contract_id: contractId,
                     instruction: instruction,
                     template_id: template_id,
+                    message_id: messageId,
                     chain: Chain.SOLANA,
                     model,
                     byok,
@@ -192,6 +194,9 @@ export default class GenerateContract {
                         switch (event.type) {
                             case PHASE_TYPES.STARTING:
                                 setPhase(PHASE_TYPES.STARTING);
+                                setActivity(
+                                    'Understanding the request and preparing the project plan',
+                                );
                                 break;
 
                             case STAGE.CONTEXT:
@@ -207,6 +212,7 @@ export default class GenerateContract {
                             case STAGE.FINALIZING:
                                 if (event.systemMessage) {
                                     setPhase(event.systemMessage.stage);
+                                    setActivity(event.systemMessage.content);
                                 }
                                 break;
 
@@ -223,8 +229,10 @@ export default class GenerateContract {
                                 setPhase(event.type);
                                 if ('file' in event.data) {
                                     if ('phase' in event.data && event.data.phase === 'deleting') {
+                                        setActivity(`Removing ${event.data.file as string}`);
                                         deleteFile(event.data.file as string);
                                     } else {
+                                        setActivity(`Creating ${event.data.file as string}`);
                                         setCurrentFileEditing(event.data.file as string);
                                         setLivePreview(
                                             event.data.file as string,
@@ -271,6 +279,7 @@ export default class GenerateContract {
                                     clearLivePreview();
                                     setCurrentFileEditing(null);
                                     setPhase(PHASE_TYPES.COMPLETE);
+                                    setActivity('');
                                     setLoading(false);
                                     setCollapseFileTree(true);
                                 }
@@ -307,7 +316,7 @@ export default class GenerateContract {
         model: MODEL = MODEL.GEMINI,
         onError?: (error: Error) => void,
     ): Promise<void> {
-        const { setLoading, upsertMessage, setPhase, setCurrentFileEditing } =
+        const { setLoading, upsertMessage, setPhase, setActivity, setCurrentFileEditing } =
             useBuilderChatStore.getState();
         const {
             deleteFile,
@@ -424,6 +433,9 @@ export default class GenerateContract {
                         switch (event.type) {
                             case PHASE_TYPES.STARTING:
                                 setPhase(PHASE_TYPES.STARTING);
+                                setActivity(
+                                    'Understanding the request and preparing the project plan',
+                                );
                                 break;
 
                             case STAGE.CONTEXT:
@@ -439,6 +451,7 @@ export default class GenerateContract {
                             case STAGE.FINALIZING:
                                 if (event.systemMessage) {
                                     setPhase(event.systemMessage.stage);
+                                    setActivity(event.systemMessage.content);
                                 }
                                 break;
 
@@ -455,8 +468,10 @@ export default class GenerateContract {
                                 setPhase(event.type);
                                 if ('file' in event.data) {
                                     if ('phase' in event.data && event.data.phase === 'deleting') {
+                                        setActivity(`Removing ${event.data.file as string}`);
                                         deleteFile(event.data.file as string);
                                     } else {
+                                        setActivity(`Creating ${event.data.file as string}`);
                                         setCurrentFileEditing(event.data.file as string);
                                         setLivePreview(
                                             event.data.file as string,
@@ -509,6 +524,7 @@ export default class GenerateContract {
                                     clearLivePreview();
                                     setCurrentFileEditing(null);
                                     setPhase(PHASE_TYPES.COMPLETE);
+                                    setActivity('');
                                     setLoading(false);
                                     setCollapseFileTree(true);
                                 }
