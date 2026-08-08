@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { build, type Loader, type Plugin } from 'esbuild';
+import { build, stop, type BuildOptions, type Loader, type Plugin } from 'esbuild';
 import { normalizeProjectPath } from '../lib/workspace.js';
 import type { ProjectFile } from '../types.js';
 
@@ -10,6 +10,7 @@ const ALLOWED_PACKAGES = new Set(['lucide-react', 'phaser', 'react', 'react-dom'
 const NEXT_STUBS = new Set(['next/dynamic', 'next/head', 'next/image', 'next/link', 'next/navigation']);
 const ENTRY_CANDIDATES = ['app/page.tsx', 'src/app/page.tsx', 'src/main.tsx', 'src/main.jsx', 'src/App.tsx', 'src/App.jsx'];
 const GLOBAL_STYLE_CANDIDATES = ['app/globals.css', 'src/app/globals.css', 'src/index.css', 'src/App.css', 'styles/globals.css', 'globals.css', 'style.css'];
+let previewBuildQueue: Promise<void> = Promise.resolve();
 
 export type PreviewStatus = 'idle' | 'building' | 'ready' | 'error';
 
@@ -63,7 +64,7 @@ export class PreviewService {
     });
 
     try {
-      const html = await compileProjectPreview(files);
+      const html = await enqueuePreviewCompile(files);
       const ready: StoredPreview = {
         projectId,
         status: 'ready',
@@ -96,6 +97,15 @@ export class PreviewService {
   }
 }
 
+function enqueuePreviewCompile(files: ProjectFile[]): Promise<string> {
+  const compilation = previewBuildQueue.then(() => compileProjectPreview(files));
+  previewBuildQueue = compilation.then(
+    () => undefined,
+    () => undefined,
+  );
+  return compilation;
+}
+
 async function compileProjectPreview(files: ProjectFile[]): Promise<string> {
   const normalizedFiles = new Map<string, string>();
   let totalBytes = 0;
@@ -122,7 +132,7 @@ async function compileProjectPreview(files: ProjectFile[]): Promise<string> {
     .join('\n');
   const entrySource = isSelfMountingEntry ? `${globalStyleImports}\nimport ${JSON.stringify(`blackin-project:${entryPath}`)};` : createMountedEntry(entryPath, globalStyleImports);
 
-  const result = await build({
+  const buildOptions: BuildOptions = {
     bundle: true,
     entryPoints: ['blackin-preview-entry'],
     format: 'iife',
@@ -137,14 +147,29 @@ async function compileProjectPreview(files: ProjectFile[]): Promise<string> {
     treeShaking: true,
     write: false,
     plugins: [createVirtualProjectPlugin(normalizedFiles, entrySource)],
-  });
+  };
+  const result = await buildWithServiceRecovery(buildOptions);
 
-  const script = result.outputFiles.find((output) => output.path.endsWith('.js'))?.text;
-  const styles = result.outputFiles.find((output) => output.path.endsWith('.css'))?.text ?? '';
+  const outputFiles = result.outputFiles;
+  if (!outputFiles) throw new PreviewBuildError('The preview compiler returned no output files');
+  const script = outputFiles.find((output) => output.path.endsWith('.js'))?.text;
+  const styles = outputFiles.find((output) => output.path.endsWith('.css'))?.text ?? '';
   if (!script) throw new PreviewBuildError('The preview compiler returned no browser bundle');
 
   const title = escapeHtml(typeof packageJson.name === 'string' && packageJson.name.trim() ? packageJson.name.trim() : 'BlackIn preview');
   return createPreviewDocument(title, styles, script);
+}
+
+async function buildWithServiceRecovery(options: BuildOptions) {
+  try {
+    return await build(options);
+  } catch (error) {
+    if (!(error instanceof Error) || !/service is no longer running/i.test(error.message)) {
+      throw error;
+    }
+    stop();
+    return build(options);
+  }
 }
 
 function createMountedEntry(entryPath: string, globalStyleImports: string): string {

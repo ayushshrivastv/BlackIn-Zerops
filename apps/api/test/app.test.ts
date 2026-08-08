@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { stop as stopEsbuild } from 'esbuild';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
@@ -317,6 +318,13 @@ export default function GamePage() {
     expect(preview.statusCode).toBe(200);
     expect(preview.body).toContain('Phaser preview ready');
     expect(preview.body).toContain('--preview-marker');
+
+    stopEsbuild();
+    const restarted = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(restarted.statusCode, restarted.body).toBe(200);
   });
 
   it('supports client-only components loaded with next/dynamic', async () => {
