@@ -42,7 +42,7 @@ zerops:
       ports:
         - port: 3000
           httpSupport: true
-      start: node apps/web/.next/standalone/apps/web/server.js
+      start: node apps/web/server.js
 
   - setup: api
     build:
@@ -77,4 +77,4 @@ zerops:
       ports:
         - port: 4000
           httpSupport: true
-      start: node --enable-source-maps deploy/api/dist/server.js
+      start: node --enable-source-maps dist/server.js

@@ -15,16 +15,9 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy ${{ matrix.setup }}
+    name: Deploy application
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - setup: api
-            service_id: prLbFXrRRJumQubhswhlGw
-          - setup: web
-            service_id: RriPt4naSxOTRFEAQASwag
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
@@ -38,12 +31,16 @@ jobs:
           ZEROPS_TOKEN: ${{ secrets.ZEROPS_TOKEN }}
         run: zcli login "$ZEROPS_TOKEN"
 
-      - name: Deploy ${{ matrix.setup }} service
-        env:
-          ZEROPS_SERVICE_ID: ${{ matrix.service_id }}
-          ZEROPS_SETUP: ${{ matrix.setup }}
+      - name: Deploy API service
         run: >-
-          zcli service push "$ZEROPS_SERVICE_ID"
-          --setup "$ZEROPS_SETUP"
+          zcli service push "prLbFXrRRJumQubhswhlGw"
+          --setup "api"
+          --workspace-state clean
+          --version-name "github-${GITHUB_SHA::7}"
+
+      - name: Deploy web service
+        run: >-
+          zcli service push "RriPt4naSxOTRFEAQASwag"
+          --setup "web"
           --workspace-state clean
           --version-name "github-${GITHUB_SHA::7}"

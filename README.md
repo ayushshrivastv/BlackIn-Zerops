@@ -78,7 +78,7 @@ flowchart LR
 
 ### Git deployment
 
-Pushes to `main` automatically deploy the complete application through the `Deploy to Zerops` GitHub Actions workflow. The workflow runs isolated deployment jobs for the `api` and `web` services, explicitly selects the matching setup from `zerops.yml`, and reports each pipeline independently. It can also be started manually from the repository's Actions page.
+Pushes to `main` automatically deploy the complete application through the `Deploy to Zerops` GitHub Actions workflow. The workflow explicitly selects the matching setup from `zerops.yml`, deploys `api` before `web`, and prevents competing build containers from racing for project resources. It can also be started manually from the repository's Actions page.
 
 Authentication is provided by the encrypted `ZEROPS_TOKEN` repository secret. The token is scoped to the BlackIn Zerops project and is never stored in the source tree or workflow logs. Both services use the same committed source while Zerops builds, releases, and verifies each runtime with its own pipeline definition.
 
