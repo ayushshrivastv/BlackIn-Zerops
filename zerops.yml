@@ -20,7 +20,6 @@ zerops:
         - apps/web/.next/standalone
       cache:
         - node_modules
-        - apps/web/.next/cache
     deploy:
       readinessCheck:
         httpGet:
