@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#eef8ff" />
+  <title>Brickbound — Browser Platformer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell" aria-label="Brickbound platformer">
+    <header class="topbar">
+      <div>
+        <h1>Brickbound</h1>
+        <p>Run. Jump. Collect. Reach the beacon.</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="pauseBtn" type="button" aria-label="Pause game">Pause</button>
+        <button id="restartBtn" type="button" aria-label="Restart level">Restart</button>
+      </div>
+    </header>
+
+    <section class="game-card">
+      <div class="hud" aria-live="polite">
+        <span>Score <strong id="scoreValue">0</strong></span>
+        <span>Coins <strong id="coinValue">0</strong></span>
+        <span>Lives <strong id="lifeValue">3</strong></span>
+        <span>Level <strong id="levelValue">1</strong></span>
+        <span>High <strong id="highValue">0</strong></span>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="1280" height="720" aria-label="Brickbound game canvas"></canvas>
+
+        <div id="overlay" class="overlay visible">
+          <div class="panel">
+            <p class="eyebrow">ORIGINAL BROWSER PLATFORMER</p>
+            <h2 id="overlayTitle">Brickbound</h2>
+            <p id="overlayText">Collect coins, squash critters, grab power-ups, touch checkpoints, and reach the glowing beacon.</p>
+            <div class="controls-grid">
+              <span><kbd>A</kbd>/<kbd>←</kbd> Move left</span>
+              <span><kbd>D</kbd>/<kbd>→</kbd> Move right</span>
+              <span><kbd>W</kbd>/<kbd>↑</kbd>/<kbd>Space</kbd> Jump</span>
+              <span><kbd>P</kbd>/<kbd>Esc</kbd> Pause</span>
+              <span><kbd>R</kbd> Restart</span>
+            </div>
+            <button id="overlayBtn" type="button">Start Game</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-controls" aria-label="Touch controls">
+        <div class="dpad">
+          <button id="leftBtn" type="button">◀</button>
+          <button id="rightBtn" type="button">▶</button>
+        </div>
+        <button id="jumpBtn" class="jump" type="button">JUMP</button>
+      </div>
+    </section>
+
+    <footer>
+      <span>Tip: stomping enemies earns bonus score.</span>
+      <span id="statusText">Ready</span>
+    </footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

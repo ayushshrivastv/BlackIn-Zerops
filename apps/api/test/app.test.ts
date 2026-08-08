@@ -6,6 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { DemoProjectGenerator } from '../src/generation/demo-generator.js';
+import { BRICKBOUND_EXAMPLE_PROMPT } from '../src/preview/example-projects.js';
 import type { ProjectGenerator } from '../src/types.js';
 
 describe('generation API', () => {
@@ -202,6 +203,81 @@ describe('generation API', () => {
     expect(preview.body).toContain('id="root"');
     expect(preview.body).toContain("Object.defineProperty(window, storageName");
     expect(preview.body).toContain('createRoot');
+  });
+
+  it('runs normal generation before using the exact-prompt preview example', async () => {
+    const projectId = 'brickbound-example-preview';
+    const generation = await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: {
+        contract_id: projectId,
+        instruction: BRICKBOUND_EXAMPLE_PROMPT,
+      },
+    });
+
+    expect(generation.statusCode).toBe(200);
+    const events = generation.body
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as { type: string });
+    expect(events.some((event) => event.type === 'PLANNING')).toBe(true);
+    expect(events.some((event) => event.type === 'EDITING_FILE')).toBe(true);
+    expect(events.some((event) => event.type === 'FINALIZING')).toBe(true);
+    expect(events.at(-1)?.type).toBe('END');
+    expect(generation.body).not.toContain('Brickbound');
+
+    const project = await app.inject({
+      method: 'GET',
+      url: `/api/v1/projects/${projectId}`,
+    });
+    expect(project.statusCode).toBe(200);
+    expect(project.body).not.toContain('Brickbound');
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(started.statusCode, started.body).toBe(200);
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `/api/v1/previews/${projectId}`,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.body).toContain('<title>Brickbound');
+    expect(preview.body).toContain('aria-label="Brickbound game canvas"');
+    expect(preview.body).toContain('const LEVELS = [');
+    expect(preview.body).toContain('--bg: #eef8ff');
+    expect(preview.body).not.toContain('href="styles.css"');
+    expect(preview.body).not.toContain('src="game.js"');
+  });
+
+  it('keeps near-matching prompts on the generated preview path', async () => {
+    const projectId = 'brickbound-near-match-preview';
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: {
+        contract_id: projectId,
+        instruction: BRICKBOUND_EXAMPLE_PROMPT.replace('power ups', 'power-ups'),
+      },
+    });
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(started.statusCode, started.body).toBe(200);
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `/api/v1/previews/${projectId}`,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.body).toContain('id="root"');
+    expect(preview.body).not.toContain('Brickbound');
   });
 
   it('rejects dependencies outside the controlled preview runtime', async () => {

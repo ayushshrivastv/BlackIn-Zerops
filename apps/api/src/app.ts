@@ -8,6 +8,7 @@ import { createProjectGenerator } from './generation/generator-factory.js';
 import { createMessage } from './lib/messages.js';
 import { createProjectArchive } from './lib/project-archive.js';
 import { validateGeneratedProject } from './lib/workspace.js';
+import { matchPreviewExample } from './preview/example-projects.js';
 import { GenerationInProgressError, GenerationService } from './services/generation-service.js';
 import { PreviewBuildError, PreviewService } from './services/preview-service.js';
 import { ProjectStore } from './storage/project-store.js';
@@ -220,7 +221,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         message: 'Finish generating the project before starting its preview',
       });
     }
-    const preview = await previewService.start(projectId, project.files);
+    const preview = await previewService.start(
+      projectId,
+      project.files,
+      matchPreviewExample(project.prompt),
+    );
     return {
       success: true,
       message: 'Interactive preview is ready',

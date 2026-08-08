@@ -1,7 +1,9 @@
 import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { build, stop, type BuildOptions, type Loader, type Plugin } from 'esbuild';
 import { normalizeProjectPath } from '../lib/workspace.js';
+import type { PreviewExampleProject } from '../preview/example-projects.js';
 import type { ProjectFile } from '../types.js';
 
 const require = createRequire(import.meta.url);
@@ -51,7 +53,11 @@ export class PreviewService {
     return preview?.status === 'ready' ? preview.html : null;
   }
 
-  async start(projectId: string, files: ProjectFile[]): Promise<ProjectPreviewState> {
+  async start(
+    projectId: string,
+    files: ProjectFile[],
+    exampleProject: PreviewExampleProject | null = null,
+  ): Promise<ProjectPreviewState> {
     const now = new Date().toISOString();
     this.previews.set(projectId, {
       projectId,
@@ -64,7 +70,7 @@ export class PreviewService {
     });
 
     try {
-      const html = await enqueuePreviewCompile(files);
+      const html = await enqueuePreviewCompile(files, exampleProject);
       const ready: StoredPreview = {
         projectId,
         status: 'ready',
@@ -97,13 +103,121 @@ export class PreviewService {
   }
 }
 
-function enqueuePreviewCompile(files: ProjectFile[]): Promise<string> {
-  const compilation = previewBuildQueue.then(() => compileProjectPreview(files));
+function enqueuePreviewCompile(files: ProjectFile[], exampleProject: PreviewExampleProject | null): Promise<string> {
+  const compilation = previewBuildQueue.then(() =>
+    exampleProject ? compileExampleProjectPreview(exampleProject) : compileProjectPreview(files),
+  );
   previewBuildQueue = compilation.then(
     () => undefined,
     () => undefined,
   );
   return compilation;
+}
+
+async function compileExampleProjectPreview(exampleProject: PreviewExampleProject): Promise<string> {
+  const filePaths = [exampleProject.entryFile, ...exampleProject.stylesheets, ...exampleProject.scripts];
+  const sourceEntries = await Promise.all(
+    filePaths.map(async (filePath) => [filePath, await readExampleFile(exampleProject, filePath)] as const),
+  );
+  const totalBytes = sourceEntries.reduce((sum, [, content]) => sum + Buffer.byteLength(content), 0);
+  if (totalBytes > MAX_PREVIEW_SOURCE_BYTES) {
+    throw new PreviewBuildError('The project is too large for an interactive preview');
+  }
+
+  const sources = new Map(sourceEntries);
+  let document = sources.get(exampleProject.entryFile);
+  if (!document) {
+    throw new PreviewBuildError('The preview source is missing its entry document');
+  }
+
+  for (const stylesheet of exampleProject.stylesheets) {
+    const source = sources.get(stylesheet);
+    if (source === undefined) throw new PreviewBuildError(`Preview source file not found: ${stylesheet}`);
+    document = replaceExampleAsset(
+      document,
+      stylesheetPattern(stylesheet),
+      `<style>${source.replaceAll('</style', '<\\/style')}</style>`,
+      stylesheet,
+    );
+  }
+
+  let storageFallbackAdded = false;
+  for (const script of exampleProject.scripts) {
+    const source = sources.get(script);
+    if (source === undefined) throw new PreviewBuildError(`Preview source file not found: ${script}`);
+    const storageFallback = storageFallbackAdded ? '' : `<script>${createStorageFallbackScript()}</script>\n`;
+    storageFallbackAdded = true;
+    document = replaceExampleAsset(
+      document,
+      scriptPattern(script),
+      `${storageFallback}<script>${source.replaceAll('</script', '<\\/script')}</script>`,
+      script,
+    );
+  }
+
+  return document;
+}
+
+async function readExampleFile(exampleProject: PreviewExampleProject, relativePath: string): Promise<string> {
+  const root = path.resolve(exampleProject.directory);
+  const target = path.resolve(root, relativePath);
+  if (target !== root && !target.startsWith(`${root}${path.sep}`)) {
+    throw new PreviewBuildError('Preview source files must stay inside their project directory');
+  }
+  try {
+    return await readFile(target, 'utf8');
+  } catch {
+    throw new PreviewBuildError(`Preview source file not found: ${relativePath}`);
+  }
+}
+
+function replaceExampleAsset(document: string, pattern: RegExp, replacement: string, assetPath: string): string {
+  if (!pattern.test(document)) {
+    throw new PreviewBuildError(`Preview entry does not reference ${assetPath}`);
+  }
+  return document.replace(pattern, replacement);
+}
+
+function stylesheetPattern(assetPath: string): RegExp {
+  const escapedPath = escapeRegExp(assetPath);
+  return new RegExp(
+    `<link\\b(?=[^>]*\\brel\\s*=\\s*["\']stylesheet["\'])(?=[^>]*\\bhref\\s*=\\s*["\']${escapedPath}["\'])[^>]*>`,
+    'i',
+  );
+}
+
+function scriptPattern(assetPath: string): RegExp {
+  const escapedPath = escapeRegExp(assetPath);
+  return new RegExp(
+    `<script\\b(?=[^>]*\\bsrc\\s*=\\s*["\']${escapedPath}["\'])[^>]*>\\s*</script>`,
+    'i',
+  );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function createStorageFallbackScript(): string {
+  return `for (const storageName of ['localStorage', 'sessionStorage']) {
+  try {
+    window[storageName].getItem('__blackin_preview_probe__');
+  } catch {
+    const values = new Map();
+    const memoryStorage = {
+      get length() { return values.size; },
+      clear() { values.clear(); },
+      getItem(key) { return values.get(String(key)) ?? null; },
+      key(index) { return Array.from(values.keys())[index] ?? null; },
+      removeItem(key) { values.delete(String(key)); },
+      setItem(key, value) { values.set(String(key), String(value)); },
+    };
+    Object.defineProperty(window, storageName, {
+      configurable: true,
+      value: memoryStorage,
+    });
+  }
+}`;
 }
 
 async function compileProjectPreview(files: ProjectFile[]): Promise<string> {
