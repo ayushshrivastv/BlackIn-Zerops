@@ -199,6 +199,7 @@ describe('generation API', () => {
     expect(preview.headers['content-type']).toContain('text/html');
     expect(preview.headers['content-security-policy']).toContain("connect-src 'none'");
     expect(preview.body).toContain('id="root"');
+    expect(preview.body).toContain("Object.defineProperty(window, storageName");
     expect(preview.body).toContain('createRoot');
   });
 
