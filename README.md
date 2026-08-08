@@ -6,10 +6,12 @@
   </picture>
 </p>
 
-<h1 align="center">BlackIn Studio</h1>
+<h1 align="center">Powered by Zerops</h1>
 
 <p align="center">
-  <strong>Build complete Web2 applications from a single prompt.</strong>
+  <strong>BlackIn turns your ideas into code.
+Describe what you want to build in natural language, and BlackIn brings it to life with AI. Built by BlackIn Studios.
+</strong>
 </p>
 
 <p align="center">
