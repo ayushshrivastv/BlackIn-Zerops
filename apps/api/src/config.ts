@@ -16,7 +16,7 @@ const envSchema = z.object({
   DATA_DIR: z.string().optional(),
   GENERATION_PROVIDER: z.enum(['auto', 'gemini', 'demo']).default('auto'),
   GEMINI_API_KEY: z.string().min(1).optional(),
-  GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash-lite'),
+  GEMINI_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
   GEMINI_MAX_TOOL_ROUNDS: z.coerce.number().int().min(2).max(30).default(12),
   API_AUTH_TOKEN: z.string().min(16).optional(),
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
