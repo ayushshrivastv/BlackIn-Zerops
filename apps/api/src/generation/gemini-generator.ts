@@ -14,6 +14,7 @@ import { deriveProjectTitle } from './demo-generator.js';
 import { PROJECT_GENERATION_SYSTEM_PROMPT } from './system-prompt.js';
 
 const writeFileSchema = z.object({ path: z.string().min(1), content: z.string() });
+const writeFilesSchema = z.object({ files: z.array(writeFileSchema).min(1).max(120) });
 const filePathSchema = z.object({ path: z.string().min(1) });
 const finishSchema = z.object({
   title: z.string().min(1).max(100),
@@ -34,6 +35,28 @@ const functionDeclarations: FunctionDeclaration[] = [
       type: Type.OBJECT,
       properties: { path: { type: Type.STRING, description: 'Project-relative file path.' } },
       required: ['path'],
+    },
+  },
+  {
+    name: 'write_files',
+    description: 'Create or replace multiple complete text files in one workspace operation.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        files: {
+          type: Type.ARRAY,
+          description: 'Complete project files to write together.',
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              path: { type: Type.STRING, description: 'Project-relative file path.' },
+              content: { type: Type.STRING, description: 'Complete file contents.' },
+            },
+            required: ['path', 'content'],
+          },
+        },
+      },
+      required: ['files'],
     },
   },
   {
@@ -102,7 +125,13 @@ export class GeminiProjectGenerator implements ProjectGenerator {
       systemInstruction: PROJECT_GENERATION_SYSTEM_PROMPT,
       temperature: 0.2,
       maxOutputTokens: 65_536,
-      tools: [{ functionDeclarations }],
+      tools: [
+        {
+          functionDeclarations: isUpdate
+            ? functionDeclarations
+            : functionDeclarations.filter((declaration) => declaration.name !== 'write_file'),
+        },
+      ],
       toolConfig: {
         functionCallingConfig: {
           mode: FunctionCallingConfigMode.AUTO,
@@ -183,6 +212,14 @@ async function executeTool(
       case 'write_file': {
         const { path, content } = writeFileSchema.parse(call.args ?? {});
         return { ok: true, ...(await workspace.write(path, content)) };
+      }
+      case 'write_files': {
+        const { files } = writeFilesSchema.parse(call.args ?? {});
+        const written = [];
+        for (const file of files) {
+          written.push(await workspace.write(file.path, file.content));
+        }
+        return { ok: true, files: written };
       }
       case 'delete_file': {
         const { path } = filePathSchema.parse(call.args ?? {});

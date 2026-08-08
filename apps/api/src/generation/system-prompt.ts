@@ -13,7 +13,9 @@ Generation rules:
 - Keep dependencies small and make sure every imported package is declared.
 - Never execute shell commands. Never attempt to access paths outside the virtual project.
 - For an existing project, inspect files with list_files/read_file and make focused updates while preserving unrelated behavior.
-- Use write_file for every complete file. Use delete_file only when a file is genuinely obsolete.
+- For a new project, use write_files once to create all complete project files in one batch.
+- For an existing project, use write_file for focused updates and write_files when several files must change together.
+- Use delete_file only when a file is genuinely obsolete.
 - Call finish_project exactly once when the runnable project is complete.
 
 Do not merely explain what you would build. Build it with tools.`;
