@@ -5,13 +5,14 @@ import { useCodeEditor } from '@/src/store/code/useCodeEditor';
 import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
 import { cn } from '@/src/lib/utils';
 import { MdHomeFilled } from 'react-icons/md';
-import { ClipboardList, MessageSquareText } from 'lucide-react';
+import { ClipboardList, MessageSquareText, MonitorPlay } from 'lucide-react';
 
 export enum SidePanelValues {
     FILE = 'FILE',
     GITHUB = 'GITHUB',
     CHAT = 'CHAT',
     PLAN = 'PLAN',
+    PREVIEW = 'PREVIEW',
 }
 
 interface EditorSidePanelProps {
@@ -35,9 +36,11 @@ export default function EditorSidePanel({
             ? SidePanelValues.PLAN
             : currentState === SidePanelValues.GITHUB
               ? SidePanelValues.GITHUB
-              : !collapseChat
-                ? SidePanelValues.CHAT
-                : SidePanelValues.FILE;
+              : currentState === SidePanelValues.PREVIEW
+                ? SidePanelValues.PREVIEW
+                : !collapseChat
+                  ? SidePanelValues.CHAT
+                  : SidePanelValues.FILE;
 
     function toggleChatPanelForFileView() {
         setCurrentState(SidePanelValues.FILE);
@@ -56,6 +59,12 @@ export default function EditorSidePanel({
             value: SidePanelValues.FILE,
             onClick: () => toggleChatPanelForFileView(),
             tooltip: 'Files',
+        },
+        {
+            icon: <MonitorPlay className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+            value: SidePanelValues.PREVIEW,
+            onClick: () => setCurrentState(SidePanelValues.PREVIEW),
+            tooltip: 'Project Preview',
         },
         {
             icon: <PiGithubLogoFill size={21} />,
@@ -120,6 +129,10 @@ export default function EditorSidePanel({
                 setCurrentState(value);
                 setCollapsechat(true);
                 handleConditionalToggle(value);
+                break;
+            }
+            case SidePanelValues.PREVIEW: {
+                setCurrentState(value);
                 break;
             }
             default: {

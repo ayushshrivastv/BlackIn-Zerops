@@ -20,6 +20,7 @@ import { DAILY_LIMIT } from '@lighthouse/types';
 import { shouldEnableDevAccessClient } from '../runtime-mode';
 import { toast } from 'sonner';
 import Playground from './playground';
+import { usePreviewStore } from '@/src/store/code/usePreviewStore';
 
 const inFlightGenerationContracts = new Set<string>();
 
@@ -113,6 +114,7 @@ export default class GenerateContract {
             inFlightGenerationContracts.add(contractId);
             setLoading(true);
             clearLivePreview();
+            usePreviewStore.getState().resetPreview(contractId);
 
             const response = await fetch(GENERATE_CONTRACT, {
                 method: 'POST',
@@ -327,6 +329,7 @@ export default class GenerateContract {
             inFlightGenerationContracts.add(contractId);
             setLoading(true);
             clearLivePreview();
+            usePreviewStore.getState().resetPreview(contractId);
 
             if (!contractId || !message.trim()) {
                 throw new Error('Missing required parameters');

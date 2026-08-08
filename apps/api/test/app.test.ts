@@ -13,7 +13,11 @@ describe('generation API', () => {
 
   beforeEach(async () => {
     dataDir = await mkdtemp(path.join(tmpdir(), 'blackin-api-test-'));
-    app = await buildApp({ dataDir, generator: new DemoProjectGenerator(), logger: false });
+    app = await buildApp({
+      dataDir,
+      generator: new DemoProjectGenerator(),
+      logger: false,
+    });
     await app.ready();
   });
 
@@ -49,11 +53,11 @@ describe('generation API', () => {
       payload: { contractId: projectId },
     });
     expect(chat.statusCode).toBe(200);
-    const chatBody = chat.json<{ data: { messages: unknown[]; contractFiles: string } }>();
+    const chatBody = chat.json<{
+      data: { messages: unknown[]; contractFiles: string };
+    }>();
     expect(chatBody.data.messages.length).toBeGreaterThanOrEqual(2);
-    expect(JSON.parse(chatBody.data.contractFiles)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ path: 'package.json' })]),
-    );
+    expect(JSON.parse(chatBody.data.contractFiles)).toEqual(expect.arrayContaining([expect.objectContaining({ path: 'package.json' })]));
 
     const archive = await app.inject({
       method: 'POST',
@@ -69,13 +73,22 @@ describe('generation API', () => {
     await app.inject({
       method: 'POST',
       url: '/api/v1/generate',
-      payload: { contract_id: 'delete-me', instruction: 'Build a simple booking page' },
+      payload: {
+        contract_id: 'delete-me',
+        instruction: 'Build a simple booking page',
+      },
     });
 
-    const list = await app.inject({ method: 'GET', url: '/api/v1/contracts/get-user-contracts' });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/v1/contracts/get-user-contracts',
+    });
     expect(list.json<{ data: Array<{ id: string }> }>().data[0]?.id).toBe('delete-me');
 
-    const deleted = await app.inject({ method: 'DELETE', url: '/api/v1/contracts/delete-me' });
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/contracts/delete-me',
+    });
     expect(deleted.json<{ success: boolean }>().success).toBe(true);
   });
 
@@ -92,17 +105,30 @@ describe('generation API', () => {
           summary: 'Generation completed.',
           provider: 'test',
           model: 'slow-generator',
-          files: [{ path: 'package.json', content: '{"scripts":{"build":"next build"}}' }],
+          files: [
+            {
+              path: 'package.json',
+              content: '{"scripts":{"build":"next build"}}',
+            },
+          ],
         };
       },
     };
-    app = await buildApp({ dataDir, generator: slowGenerator, logger: false, streamHeartbeatMs: 5 });
+    app = await buildApp({
+      dataDir,
+      generator: slowGenerator,
+      logger: false,
+      streamHeartbeatMs: 5,
+    });
     await app.ready();
 
     const generation = await app.inject({
       method: 'POST',
       url: '/api/v1/generate',
-      payload: { contract_id: 'slow-project', instruction: 'Build a slow project' },
+      payload: {
+        contract_id: 'slow-project',
+        instruction: 'Build a slow project',
+      },
     });
     const eventTypes = generation.body
       .trim()
@@ -112,5 +138,79 @@ describe('generation API', () => {
 
     expect(eventTypes).toContain('HEARTBEAT');
     expect(eventTypes.at(-1)).toBe('END');
+  });
+
+  it('builds a controlled interactive preview for a generated project', async () => {
+    const projectId = 'preview-project';
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: {
+        contract_id: projectId,
+        instruction: 'Build a responsive feedback portal',
+      },
+    });
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(started.statusCode).toBe(200);
+    expect(started.json<{ data: { status: string; url: string } }>().data).toMatchObject({
+      status: 'ready',
+      url: `/api/v1/previews/${projectId}`,
+    });
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `/api/v1/previews/${projectId}`,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.headers['content-type']).toContain('text/html');
+    expect(preview.headers['content-security-policy']).toContain("connect-src 'none'");
+    expect(preview.body).toContain('id="root"');
+    expect(preview.body).toContain('createRoot');
+  });
+
+  it('rejects dependencies outside the controlled preview runtime', async () => {
+    const projectId = 'unsafe-preview';
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/generate',
+      payload: {
+        contract_id: projectId,
+        instruction: 'Build a simple booking page',
+      },
+    });
+    const project = await app.inject({
+      method: 'GET',
+      url: `/api/v1/projects/${projectId}`,
+    });
+    const files = project.json<{
+      data: { files: Array<{ path: string; content: string }> };
+    }>().data.files;
+    const packageFile = files.find((file) => file.path === 'package.json');
+    expect(packageFile).toBeDefined();
+    packageFile!.content = JSON.stringify({
+      scripts: { dev: 'next dev', build: 'next build' },
+      dependencies: {
+        next: '15.5.9',
+        react: '19.1.0',
+        'react-dom': '19.1.0',
+        express: '5.0.0',
+      },
+    });
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/files/sync',
+      payload: { contractId: projectId, files },
+    });
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/preview`,
+    });
+    expect(started.statusCode).toBe(422);
+    expect(started.json<{ message: string }>().message).toContain('express');
   });
 });

@@ -6,386 +6,138 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { TbGitCompare } from 'react-icons/tb';
-import { RiRocket2Line } from 'react-icons/ri';
-import ToolTipComponent from '../ui/TooltipComponent';
+import { useParams } from 'next/navigation';
+import { GitCompareArrows, LoaderCircle, MonitorPlay } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import ToolTipComponent from '../ui/TooltipComponent';
 import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import { useCodeEditor } from '@/src/store/code/useCodeEditor';
+import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
+import { selectPreviewSession, usePreviewStore } from '@/src/store/code/usePreviewStore';
+import { SidePanelValues } from '../code/EditorSidePanel';
 import { FileNode, NODE } from '@lighthouse/types';
-import { useParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { useBuilderChatStore } from '@/src/store/code/useBuilderChatStore';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains';
-import { ExternalLink, FileCode2, Network, Wallet } from 'lucide-react';
 
 export default function RightPanelActions() {
-    const [showDiffPanel, setShowDiffPanel] = useState<boolean>(false);
-    const [showDeployPanel, setShowDeployPanel] = useState<boolean>(false);
-    const [deployNetwork, setDeployNetwork] = useState<'base-sepolia' | 'base-mainnet'>(
-        'base-sepolia',
-    );
-    const [entryFile, setEntryFile] = useState<string>('');
-    const [contractNameInput, setContractNameInput] = useState<string>('');
-    const [isDeploying, setIsDeploying] = useState<boolean>(false);
-    const [deployPreview, setDeployPreview] = useState<{
-        referenceId: string;
-        contractAddress: string;
-        txHash: string;
-        explorerUrl: string;
-        networkLabel: string;
-    } | null>(null);
-    const contract = useCurrentContract();
-    const { loading } = contract;
+    const [showDiffPanel, setShowDiffPanel] = useState(false);
+    const diffPanelRef = useRef<HTMLDivElement | null>(null);
+    const { loading } = useCurrentContract();
     const { fileTree, originalFileContents } = useCodeEditor();
-    const currentContractId = useBuilderChatStore((state) => state.currentContractId);
     const params = useParams<{ contractId?: string | string[] }>();
-    const routeContractId = Array.isArray(params?.contractId)
+    const contractId = Array.isArray(params?.contractId)
         ? params.contractId[0]
         : params?.contractId;
-    const _contractId = routeContractId || currentContractId || '';
-
-    const diffPanelRef = useRef<HTMLDivElement | null>(null);
-    const deployPanelRef = useRef<HTMLDivElement | null>(null);
+    const preview = usePreviewStore(selectPreviewSession(contractId));
+    const startPreview = usePreviewStore((state) => state.startPreview);
+    const setCurrentState = useSidePanelStore((state) => state.setCurrentState);
     const diffSummary = useMemo(
         () => buildDiffSummary(fileTree, originalFileContents),
         [fileTree, originalFileContents],
     );
     const hasDiffChanges = diffSummary.totalAdded > 0 || diffSummary.totalRemoved > 0;
-    const solidityFiles = useMemo(() => collectSolidityFiles(fileTree), [fileTree]);
-    const deployableEntryFiles = useMemo(() => {
-        const preferred = solidityFiles
-            .map((file) => file.path)
-            .filter((filePath) => {
-                const lower = filePath.toLowerCase();
-                return (
-                    !lower.includes('/script/') &&
-                    !lower.includes('/test/') &&
-                    !lower.endsWith('.t.sol')
-                );
-            });
-        return preferred.length ? preferred : solidityFiles.map((file) => file.path);
-    }, [solidityFiles]);
-    const hasDeployableContractFiles = deployableEntryFiles.length > 0;
-
-    const { address, isConnected, chainId } = useAccount();
-    const { connect, connectors, isPending: isConnecting } = useConnect();
-    const { disconnect } = useDisconnect();
-    const normalizedChainId = chainId == null ? null : Number(chainId);
-    const isOnBaseMainnet = normalizedChainId === base.id;
-    const isOnBaseSepolia = normalizedChainId === baseSepolia.id;
-    const connectedChainLabel = isOnBaseMainnet
-        ? 'Base Mainnet'
-        : isOnBaseSepolia
-          ? 'Base Sepolia'
-          : normalizedChainId == null
-            ? 'Unknown chain'
-            : `Chain ${normalizedChainId}`;
-    const deployConnectors = useMemo(() => {
-        const filtered = connectors.filter((connector) => connector.id !== 'walletConnect');
-        return filtered.length ? filtered : connectors;
-    }, [connectors]);
-    const walletStatusLabel = !isConnected
-        ? 'Disconnected'
-        : isOnBaseMainnet
-          ? 'Connected on Base Mainnet'
-          : isOnBaseSepolia
-            ? 'Connected on Base Sepolia'
-            : normalizedChainId == null
-              ? 'Connected'
-              : `Connected on chain ${normalizedChainId}`;
+    const hasProjectFiles = fileTree.some(
+        (node) => node.children?.length || node.type === NODE.FILE,
+    );
+    const isStartingPreview = preview.status === 'building';
 
     useEffect(() => {
-        if (!deployableEntryFiles.length) {
-            setEntryFile('');
-            return;
-        }
-        if (!entryFile || !deployableEntryFiles.includes(entryFile)) {
-            setEntryFile(deployableEntryFiles[0]);
-        }
-    }, [deployableEntryFiles, entryFile]);
-
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            const target = event.target as Node;
-            const clickedDiffPanel = diffPanelRef.current?.contains(target) ?? false;
-            const clickedDeployPanel = deployPanelRef.current?.contains(target) ?? false;
-            if (!clickedDiffPanel && !clickedDeployPanel) {
+        function handleDismiss(event: MouseEvent | KeyboardEvent) {
+            if (event instanceof KeyboardEvent && event.key === 'Escape') {
                 setShowDiffPanel(false);
-                setShowDeployPanel(false);
+                return;
+            }
+            if (
+                event instanceof MouseEvent &&
+                diffPanelRef.current &&
+                !diffPanelRef.current.contains(event.target as Node)
+            ) {
+                setShowDiffPanel(false);
             }
         }
-        if (showDiffPanel || showDeployPanel) {
-            document.addEventListener('mousedown', handleClickOutside);
+        if (showDiffPanel) {
+            document.addEventListener('mousedown', handleDismiss);
+            document.addEventListener('keydown', handleDismiss);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showDiffPanel, showDeployPanel]);
+        return () => {
+            document.removeEventListener('mousedown', handleDismiss);
+            document.removeEventListener('keydown', handleDismiss);
+        };
+    }, [showDiffPanel]);
 
-    async function handleWalletDeploy() {
-        setIsDeploying(true);
+    async function handleDeploy() {
+        if (!contractId || !hasProjectFiles || loading || isStartingPreview) return;
+        setCurrentState(SidePanelValues.PREVIEW);
+        if (preview.status === 'ready') return;
         try {
-            const referenceId = `DEPLOY-${Date.now().toString(36).toUpperCase()}`;
-            const txHash = createPseudoHex(64);
-            const contractAddress = createPseudoHex(40);
-            const explorerBase =
-                deployNetwork === 'base-mainnet'
-                    ? 'https://basescan.org/tx/'
-                    : 'https://sepolia.basescan.org/tx/';
-
-            setDeployPreview({
-                referenceId,
-                contractAddress,
-                txHash,
-                explorerUrl: `${explorerBase}${txHash}`,
-                networkLabel: deployNetwork === 'base-mainnet' ? 'Base Mainnet' : 'Base Sepolia',
-            });
+            await startPreview(contractId);
+            toast.success('Interactive preview is running');
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Wallet deployment failed';
-            toast.error(message);
-        } finally {
-            setIsDeploying(false);
+            toast.error(error instanceof Error ? error.message : 'Preview failed to start');
         }
     }
 
+    const deployTooltip = !hasProjectFiles
+        ? 'Generate a project to enable preview'
+        : preview.status === 'ready'
+          ? 'View running project'
+          : 'Run project preview';
+
     return (
-        <div className="pointer-events-auto flex items-center justify-end gap-x-3">
+        <div className="pointer-events-auto flex items-center justify-end gap-2">
             <div className="relative" ref={diffPanelRef}>
                 <ToolTipComponent content="View repo changes" side="bottom">
                     <button
                         type="button"
-                        onClick={() => setShowDiffPanel((prev) => !prev)}
+                        onClick={() => setShowDiffPanel((current) => !current)}
                         aria-label="Toggle differences panel"
-                        className="playground-diff-trigger inline-flex h-8 items-center justify-center text-light/75 transition-colors hover:text-light"
+                        aria-expanded={showDiffPanel}
+                        className="inline-flex size-10 items-center justify-center rounded-[6px] text-light/70 transition-colors hover:bg-neutral-900 hover:text-light focus-visible:ring-2 focus-visible:ring-[#8fb7ff]"
                     >
-                        <TbGitCompare
-                            className={`size-5 transition-transform ${showDiffPanel ? 'scale-105 text-light' : ''}`}
-                        />
+                        <GitCompareArrows className="size-4" />
                     </button>
                 </ToolTipComponent>
 
                 {showDiffPanel && (
-                    <div className="playground-diff-popover absolute top-[calc(100%+0.7rem)] right-0 z-50 w-[14.5rem] rounded-xl border border-neutral-800 bg-black px-3 py-2.5 shadow-[0_24px_60px_-35px_rgba(0,0,0,1)]">
-                        <div className="flex items-center gap-x-2">
-                            <TbGitCompare className="size-4 text-light/70" />
-                            <p className="text-xs font-medium text-light/90">Toggle difference</p>
+                    <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-56 rounded-[8px] border border-neutral-800 bg-[#090a0b] p-3 shadow-lg">
+                        <div className="flex items-center gap-2 text-xs font-medium text-light/90">
+                            <GitCompareArrows className="size-4 text-light/60" />
+                            Repository changes
                         </div>
                         {hasDiffChanges ? (
-                            <p className="mt-1 pl-6 text-[11px]">
-                                <span className="text-[#3fb950]">+{diffSummary.totalAdded}</span>
-                                <span className="mx-1.5 text-light/55"> </span>
-                                <span className="text-[#f85149]">-{diffSummary.totalRemoved}</span>
+                            <p className="mt-2 pl-6 text-xs">
+                                <span className="text-emerald-400">+{diffSummary.totalAdded}</span>
+                                <span className="mx-2 text-neutral-600">/</span>
+                                <span className="text-red-400">-{diffSummary.totalRemoved}</span>
                             </p>
                         ) : (
-                            <p className="mt-1 pl-6 text-[11px] text-light/55">No changes</p>
+                            <p className="mt-2 pl-6 text-xs text-neutral-500">No local changes</p>
                         )}
                     </div>
                 )}
             </div>
 
-            {hasDeployableContractFiles && (
-                <div className="relative" ref={deployPanelRef}>
-                    <ToolTipComponent content="Deploy with wallet (Base)" side="bottom">
-                        <Button
-                            disabled={loading}
-                            size="xs"
-                            onClick={() => setShowDeployPanel((prev) => !prev)}
-                            className="bg-light text-darkest hover:bg-light hover:text-darkest tracking-wider cursor-pointer transition-transform hover:-translate-y-0.5 duration-300 font-semibold exec-button-dark rounded-[4px]"
-                        >
-                            <RiRocket2Line className="size-3.5 mr-1.5" />
-                            <span className="text-[11px]">Deploy</span>
-                        </Button>
-                    </ToolTipComponent>
-
-                    {showDeployPanel && (
-                        <div className="fixed top-24 right-6 z-50 w-[min(28rem,calc(100vw-1.5rem))] max-h-[50vh] overflow-y-auto rounded-2xl border border-neutral-800 bg-[#050505] shadow-[0_32px_90px_-45px_rgba(0,0,0,1)]">
-                            <div className="border-b border-neutral-800 px-4 py-3">
-                                <p className="text-sm font-semibold text-light">Deploy Contract</p>
-                                <p className="mt-1 text-[11px] text-light/60">
-                                    Simple wallet deploy on Base from current Solidity files.
-                                </p>
-                            </div>
-
-                            <div className="space-y-3 px-4 py-4">
-                                {deployPreview ? (
-                                    <div className="space-y-3">
-                                        <p className="text-base font-semibold text-light/95">
-                                            Base Contract Deployed Successfully
-                                        </p>
-                                        <p className="text-sm text-light/65">
-                                            Your contract has been deployed on{' '}
-                                            {deployPreview.networkLabel}. You can review the onchain
-                                            transaction details below.
-                                        </p>
-                                        <Button
-                                            type="button"
-                                            className="h-9 w-full rounded-md bg-white text-xs font-medium text-black hover:bg-neutral-200"
-                                            onClick={() =>
-                                                window.open(
-                                                    deployPreview.explorerUrl,
-                                                    '_blank',
-                                                    'noopener,noreferrer',
-                                                )
-                                            }
-                                        >
-                                            <ExternalLink className="mr-1.5 size-3.5" />
-                                            Explore Onchain Transaction
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="rounded-lg border border-neutral-800 bg-neutral-900/35 p-3">
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-xs font-medium text-light/90">
-                                                    <Wallet className="size-3.5 text-light/70" />
-                                                    Wallet
-                                                </div>
-                                                <span
-                                                    className={`rounded-full border px-2 py-0.5 text-[10px] tracking-wide ${
-                                                        isConnected
-                                                            ? 'border-neutral-600 bg-black text-neutral-200'
-                                                            : 'border-neutral-700 bg-black text-neutral-400'
-                                                    }`}
-                                                >
-                                                    {walletStatusLabel}
-                                                </span>
-                                            </div>
-
-                                            {!isConnected ? (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {deployConnectors.map((connector) => (
-                                                        <Button
-                                                            key={connector.uid}
-                                                            size="xs"
-                                                            disabled={isConnecting}
-                                                            onClick={() => connect({ connector })}
-                                                            className="h-7 border border-neutral-700 bg-neutral-900 text-light hover:bg-neutral-800"
-                                                        >
-                                                            {isConnecting
-                                                                ? 'Connecting...'
-                                                                : getConnectorLabel(
-                                                                      connector.id,
-                                                                      connector.name,
-                                                                  )}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <div>
-                                                        <p className="text-[11px] text-light/80">
-                                                            {shortAddress(address || '0x')}
-                                                        </p>
-                                                        <p className="mt-1 text-[10px] text-light/60">
-                                                            {connectedChainLabel}
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        size="xs"
-                                                        onClick={() => disconnect()}
-                                                        className="h-7 border border-neutral-700 bg-neutral-900 text-light hover:bg-neutral-800"
-                                                    >
-                                                        Disconnect
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1.5 flex items-center gap-1.5 text-[11px] text-light/70">
-                                                <Network className="size-3.5" />
-                                                Network
-                                            </label>
-                                            <Select
-                                                value={deployNetwork}
-                                                onValueChange={(value) =>
-                                                    setDeployNetwork(
-                                                        value as 'base-sepolia' | 'base-mainnet',
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger className="w-full border-neutral-800 text-light">
-                                                    <SelectValue placeholder="Select network" />
-                                                </SelectTrigger>
-                                                <SelectContent
-                                                    container={deployPanelRef.current}
-                                                    className="border-neutral-800 bg-darkest text-light"
-                                                >
-                                                    <SelectItem value="base-sepolia">
-                                                        Base Sepolia
-                                                    </SelectItem>
-                                                    <SelectItem value="base-mainnet">
-                                                        Base Mainnet
-                                                    </SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1.5 flex items-center gap-1.5 text-[11px] text-light/70">
-                                                <FileCode2 className="size-3.5" />
-                                                Entry File
-                                            </label>
-                                            <Select
-                                                value={entryFile || '__none__'}
-                                                onValueChange={(value) =>
-                                                    setEntryFile(value === '__none__' ? '' : value)
-                                                }
-                                            >
-                                                <SelectTrigger className="w-full border-neutral-800 text-light">
-                                                    <SelectValue placeholder="Select file" />
-                                                </SelectTrigger>
-                                                <SelectContent
-                                                    container={deployPanelRef.current}
-                                                    className="max-h-64 border-neutral-800 bg-darkest text-light"
-                                                    align="end"
-                                                >
-                                                    {deployableEntryFiles.length === 0 && (
-                                                        <SelectItem value="__none__">
-                                                            No Solidity files
-                                                        </SelectItem>
-                                                    )}
-                                                    {deployableEntryFiles.map((filePath) => (
-                                                        <SelectItem key={filePath} value={filePath}>
-                                                            {filePath}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1.5 block text-[11px] text-light/70">
-                                                Contract Name (Optional)
-                                            </label>
-                                            <Input
-                                                value={contractNameInput}
-                                                onChange={(e) =>
-                                                    setContractNameInput(e.target.value)
-                                                }
-                                                placeholder="BaseApp"
-                                                className="w-full border border-neutral-800 !bg-dark px-3 py-2 text-sm text-light"
-                                            />
-                                        </div>
-
-                                        <Button
-                                            disabled={isDeploying || !deployableEntryFiles.length}
-                                            onClick={handleWalletDeploy}
-                                            className="h-9 w-full rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                                        >
-                                            {isDeploying
-                                                ? 'Compiling + Deploying...'
-                                                : 'Compile and Deploy'}
-                                        </Button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+            <ToolTipComponent content={deployTooltip} side="bottom">
+                <Button
+                    type="button"
+                    disabled={!hasProjectFiles || loading || isStartingPreview}
+                    onClick={handleDeploy}
+                    aria-busy={isStartingPreview}
+                    className="min-h-10 rounded-[6px] bg-light px-3 text-darkest hover:bg-white hover:text-darkest disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                    {isStartingPreview ? (
+                        <LoaderCircle className="mr-2 size-4 animate-spin motion-reduce:animate-none" />
+                    ) : (
+                        <MonitorPlay className="mr-2 size-4" />
                     )}
-                </div>
-            )}
+                    <span className="text-xs font-semibold">
+                        {isStartingPreview
+                            ? 'Starting'
+                            : preview.status === 'ready'
+                              ? 'Preview'
+                              : 'Deploy'}
+                    </span>
+                </Button>
+            </ToolTipComponent>
         </div>
     );
 }
@@ -401,61 +153,42 @@ function buildDiffSummary(
 ): DiffSummary {
     const currentFileContents: Record<string, string> = {};
     collectFileContents(fileTree, currentFileContents);
-
-    const allPaths = new Set<string>([
+    const allPaths = new Set([
         ...Object.keys(originalFileContents),
         ...Object.keys(currentFileContents),
     ]);
-
     let totalAdded = 0;
     let totalRemoved = 0;
 
-    for (const path of allPaths) {
-        const previous = originalFileContents[path] ?? '';
-        const current = currentFileContents[path] ?? '';
+    for (const filePath of allPaths) {
+        const previous = originalFileContents[filePath] ?? '';
+        const current = currentFileContents[filePath] ?? '';
         if (previous === current) continue;
-
-        const { added, removed } = calculateLineDelta(previous, current);
-        totalAdded += added;
-        totalRemoved += removed;
+        const delta = calculateLineDelta(previous, current);
+        totalAdded += delta.added;
+        totalRemoved += delta.removed;
     }
-
     return { totalAdded, totalRemoved };
 }
 
 function collectFileContents(nodes: FileNode[], target: Record<string, string>) {
     for (const node of nodes) {
-        if (node.type === NODE.FILE) {
-            target[node.id] = node.content ?? '';
-        }
-        if (node.children?.length) {
-            collectFileContents(node.children, target);
-        }
+        if (node.type === NODE.FILE) target[node.id] = node.content ?? '';
+        if (node.children?.length) collectFileContents(node.children, target);
     }
 }
 
 function calculateLineDelta(previous: string, current: string) {
     const previousLines = splitLines(previous);
     const currentLines = splitLines(current);
-    if (previousLines.length === 0 && currentLines.length === 0) {
-        return { added: 0, removed: 0 };
-    }
-
     const previousCount = new Map<string, number>();
     const currentCount = new Map<string, number>();
-
-    for (const line of previousLines) {
-        previousCount.set(line, (previousCount.get(line) ?? 0) + 1);
-    }
-    for (const line of currentLines) {
-        currentCount.set(line, (currentCount.get(line) ?? 0) + 1);
-    }
-
+    for (const line of previousLines) previousCount.set(line, (previousCount.get(line) ?? 0) + 1);
+    for (const line of currentLines) currentCount.set(line, (currentCount.get(line) ?? 0) + 1);
     let common = 0;
-    for (const [line, count] of previousCount.entries()) {
+    for (const [line, count] of previousCount) {
         common += Math.min(count, currentCount.get(line) ?? 0);
     }
-
     return {
         added: Math.max(0, currentLines.length - common),
         removed: Math.max(0, previousLines.length - common),
@@ -463,45 +196,5 @@ function calculateLineDelta(previous: string, current: string) {
 }
 
 function splitLines(content: string) {
-    if (!content) return [];
-    return content.replace(/\r\n/g, '\n').split('\n');
-}
-
-function collectSolidityFiles(nodes: FileNode[]) {
-    const sourceMap = new Map<string, string>();
-    collectSoliditySourcesRecursive(nodes, sourceMap);
-    return [...sourceMap.entries()].map(([path, content]) => ({ path, content }));
-}
-
-function collectSoliditySourcesRecursive(nodes: FileNode[], output: Map<string, string>) {
-    for (const node of nodes) {
-        if (node.type === NODE.FILE && node.id.endsWith('.sol')) {
-            const normalizedPath = node.id.replace(/\\/g, '/').replace(/^\/+/, '');
-            output.set(normalizedPath, node.content ?? '');
-            continue;
-        }
-        if (node.children?.length) {
-            collectSoliditySourcesRecursive(node.children, output);
-        }
-    }
-}
-
-function shortAddress(address: string) {
-    if (!address || address.length < 10) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
-function getConnectorLabel(connectorId: string, connectorName: string) {
-    if (connectorId === 'walletConnect') return 'Rainbow / WalletConnect';
-    if (connectorId === 'injected') return 'Browser Wallet';
-    return connectorName;
-}
-
-function createPseudoHex(length: number) {
-    const chars = '0123456789abcdef';
-    let result = '0x';
-    for (let i = 0; i < length; i += 1) {
-        result += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return result;
+    return content ? content.replace(/\r\n/g, '\n').split('\n') : [];
 }

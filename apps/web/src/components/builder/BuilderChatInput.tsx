@@ -37,6 +37,12 @@ import {
     saveQwenByokConfig,
 } from '@/src/lib/byok-model';
 import { toast } from 'sonner';
+import { ChatRole, STAGE } from '@lighthouse/types';
+import { isPreviewCommand } from '@/src/lib/preview-command';
+import { usePreviewStore } from '@/src/store/code/usePreviewStore';
+import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
+import { SidePanelValues } from '../code/EditorSidePanel';
+import { useCodeEditor } from '@/src/store/code/useCodeEditor';
 
 interface AttachmentItem {
     id: string;
@@ -81,6 +87,8 @@ export default function BuilderChatInput() {
         showRegenerateTime,
     } = useLimitStore();
     const { theme } = usePlaygroundThemeStore();
+    const startPreview = usePreviewStore((state) => state.startPreview);
+    const setCurrentPanel = useSidePanelStore((state) => state.setCurrentState);
     const shouldEnforceLimits = !shouldEnableDevAccessClient();
 
     const borderGradientColors =
@@ -215,6 +223,52 @@ export default function BuilderChatInput() {
         }
         if (isByokModelOption(selectedModel) && !getStoredQwenByokConfig()) {
             setOpenByokModal(true);
+            return;
+        }
+        if (
+            attachments.length === 0 &&
+            useCodeEditor.getState().fileTree.length > 0 &&
+            isPreviewCommand(submittedValue)
+        ) {
+            const { setMessage } = useBuilderChatStore.getState();
+            setMessage({
+                id: uuid(),
+                contractId,
+                role: ChatRole.USER,
+                content: submittedValue,
+                stage: STAGE.START,
+                isPlanExecuted: false,
+                createdAt: new Date(),
+            });
+            pendingSubmissionValueRef.current = null;
+            setInputValue('');
+            setCurrentPanel(SidePanelValues.PREVIEW);
+            try {
+                await startPreview(contractId);
+                setMessage({
+                    id: uuid(),
+                    contractId,
+                    role: ChatRole.AI,
+                    content: 'Interactive preview is running in the project panel.',
+                    stage: STAGE.END,
+                    isPlanExecuted: true,
+                    createdAt: new Date(),
+                });
+                toast.success('Interactive preview is running');
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : 'The project preview could not start';
+                setMessage({
+                    id: uuid(),
+                    contractId,
+                    role: ChatRole.SYSTEM,
+                    content: message,
+                    stage: STAGE.ERROR,
+                    isPlanExecuted: false,
+                    createdAt: new Date(),
+                });
+                toast.error(message);
+            }
             return;
         }
         const selectedModelEnum = mapModelOptionToEnum(selectedModel);

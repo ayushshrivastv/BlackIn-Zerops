@@ -24,6 +24,7 @@ import {
 import { useSidePanelStore } from '@/src/store/code/useSidePanelStore';
 import FileTree from '../code/Filetree';
 import PlanPanel from '../code/PlanPanel';
+import ProjectPreview from '../code/ProjectPreview';
 import { useCurrentContract } from '@/src/hooks/useCurrentContract';
 import { cn } from '@/src/lib/utils';
 import { shouldEnableDevAccessClient } from '@/src/lib/runtime-mode';
@@ -55,12 +56,12 @@ const DEV_SAMPLE_FILES: FileContent[] = [
     {
         path: 'apps/web/components/project-dashboard.tsx',
         content:
-            "export function ProjectDashboard() {\n  return (\n    <main className=\"min-h-screen bg-slate-50 p-8 text-slate-950\">\n      <section className=\"mx-auto max-w-5xl space-y-6\">\n        <div>\n          <p className=\"text-sm font-medium text-blue-600\">Generated workspace</p>\n          <h1 className=\"text-4xl font-semibold tracking-tight\">Customer success portal</h1>\n          <p className=\"mt-3 max-w-2xl text-slate-600\">\n            Track accounts, requests, onboarding tasks, and team activity from one dashboard.\n          </p>\n        </div>\n        <div className=\"grid gap-4 md:grid-cols-3\">\n          {['Open requests', 'Active customers', 'Tasks shipped'].map((label, index) => (\n            <article key={label} className=\"rounded-xl border bg-white p-5 shadow-sm\">\n              <p className=\"text-sm text-slate-500\">{label}</p>\n              <p className=\"mt-2 text-3xl font-semibold\">{[18, 42, 127][index]}</p>\n            </article>\n          ))}\n        </div>\n      </section>\n    </main>\n  );\n}\n",
+            'export function ProjectDashboard() {\n  return (\n    <main className="min-h-screen bg-slate-50 p-8 text-slate-950">\n      <section className="mx-auto max-w-5xl space-y-6">\n        <div>\n          <p className="text-sm font-medium text-blue-600">Generated workspace</p>\n          <h1 className="text-4xl font-semibold tracking-tight">Customer success portal</h1>\n          <p className="mt-3 max-w-2xl text-slate-600">\n            Track accounts, requests, onboarding tasks, and team activity from one dashboard.\n          </p>\n        </div>\n        <div className="grid gap-4 md:grid-cols-3">\n          {[\'Open requests\', \'Active customers\', \'Tasks shipped\'].map((label, index) => (\n            <article key={label} className="rounded-xl border bg-white p-5 shadow-sm">\n              <p className="text-sm text-slate-500">{label}</p>\n              <p className="mt-2 text-3xl font-semibold">{[18, 42, 127][index]}</p>\n            </article>\n          ))}\n        </div>\n      </section>\n    </main>\n  );\n}\n',
     },
     {
         path: 'apps/web/components/request-list.tsx',
         content:
-            "export function RequestList() {\n  return (\n    <div className=\"rounded-xl border bg-white\">\n      <div className=\"border-b p-4 font-medium\">Recent requests</div>\n      <ul className=\"divide-y text-sm\">\n        <li className=\"p-4\">Invite a new teammate</li>\n        <li className=\"p-4\">Review onboarding checklist</li>\n        <li className=\"p-4\">Export monthly account report</li>\n      </ul>\n    </div>\n  );\n}\n",
+            'export function RequestList() {\n  return (\n    <div className="rounded-xl border bg-white">\n      <div className="border-b p-4 font-medium">Recent requests</div>\n      <ul className="divide-y text-sm">\n        <li className="p-4">Invite a new teammate</li>\n        <li className="p-4">Review onboarding checklist</li>\n        <li className="p-4">Export monthly account report</li>\n      </ul>\n    </div>\n  );\n}\n',
     },
     {
         path: 'apps/web/lib/projects.ts',
@@ -70,7 +71,7 @@ const DEV_SAMPLE_FILES: FileContent[] = [
     {
         path: '.env.example',
         content:
-            "NEXT_PUBLIC_APP_URL=http://localhost:3000\nNEXT_PUBLIC_API_URL=http://localhost:3000/api\nDATABASE_URL=\n",
+            'NEXT_PUBLIC_APP_URL=http://localhost:3000\nNEXT_PUBLIC_API_URL=http://localhost:3000/api\nDATABASE_URL=\n',
     },
     {
         path: 'README.md',
@@ -85,6 +86,7 @@ export default function BuilderDashboard(): JSX.Element {
     const contractId = params?.contractId as string | undefined;
     const { loading } = contract;
     const { collapseChat, livePreviewFilePath } = useCodeEditor();
+    const activePanel = useSidePanelStore((state) => state.currentState);
     const { isConnected, subscribeToHandler } = useWebSocket();
     const { addLog, setLogs, setIsCommandRunning, setTerminalLoader } = useTerminalLogStore();
     const chatSplitContainerRef = useRef<HTMLDivElement | null>(null);
@@ -174,7 +176,10 @@ export default function BuilderDashboard(): JSX.Element {
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        window.localStorage.setItem(CHAT_PANEL_WIDTH_STORAGE_KEY, String(Math.round(chatPanelWidth)));
+        window.localStorage.setItem(
+            CHAT_PANEL_WIDTH_STORAGE_KEY,
+            String(Math.round(chatPanelWidth)),
+        );
     }, [chatPanelWidth]);
 
     useEffect(() => {
@@ -228,13 +233,16 @@ export default function BuilderDashboard(): JSX.Element {
             {!collapseChat && (
                 <>
                     <div className="w-full h-full min-h-0 sm:hidden">
-                        <BuilderChats />
+                        {activePanel === SidePanelValues.PREVIEW ? <Editing /> : <BuilderChats />}
                     </div>
                     <div
                         ref={chatSplitContainerRef}
                         className="hidden sm:flex sm:flex-1 h-full min-h-0 min-w-0"
                     >
-                        <div className="relative h-full min-h-0" style={{ width: `${chatPanelWidth}px` }}>
+                        <div
+                            className="relative h-full min-h-0"
+                            style={{ width: `${chatPanelWidth}px` }}
+                        >
                             <BuilderChats />
                             <EdgeResizeHandle side="right" onMouseDown={handleChatResizeStart} />
                         </div>
@@ -352,6 +360,8 @@ function Editing() {
                 return <CodeEditor />;
             case SidePanelValues.PLAN:
                 return <PlanPanel />;
+            case SidePanelValues.PREVIEW:
+                return <ProjectPreview />;
         }
     }
 

@@ -13,7 +13,7 @@ export default function BuilderNavbar({ leftRailVisible }: BuilderNavbarProps) {
         <div className="playground-navbar min-h-[3.5rem] bg-black text-light/70 px-6 select-none relative flex items-center">
             <div
                 className={cn(
-                    'flex items-center gap-2 transition-[margin-left] duration-300 ease-out',
+                    'hidden items-center gap-2 transition-[margin-left] duration-300 ease-out md:flex',
                     leftRailVisible ? 'ml-0' : 'ml-12',
                 )}
             >
