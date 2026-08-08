@@ -1,0 +1,16 @@
+/.git
+/.turbo
+/.vercel
+/node_modules
+/coverage
+/.data
+/artifacts
+/deploy
+/apps/web/.next
+/apps/web/out
+/apps/web/coverage
+/.DS_Store
+*.log
+.env
+.env.*
+*.pem

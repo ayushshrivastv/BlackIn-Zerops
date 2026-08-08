@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://api.app-prg1.zerops.io/api/rest/public/settings/zerops-yml-json-schema.json
+zerops:
+  - setup: web
+    build:
+      base: nodejs@20
+      prepareCommands:
+        - corepack enable
+        - corepack prepare pnpm@10.15.1 --activate
+      envVariables:
+        NEXT_PUBLIC_DEV_ACCESS_MODE: "true"
+        NEXT_PUBLIC_SKIP_TEMPLATES_FETCH: "true"
+        NEXT_PUBLIC_DEPLOY_PLACEHOLDER_MODE: "true"
+        NEXT_PUBLIC_CHAIN_BASE_ENABLED: "false"
+      buildCommands:
+        - pnpm install --frozen-lockfile
+        - pnpm --filter web build
+        - cp -R apps/web/public apps/web/.next/standalone/apps/web/public
+        - cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+      deployFiles:
+        - apps/web/.next/standalone
+      cache:
+        - node_modules
+        - apps/web/.next/cache
+    deploy:
+      readinessCheck:
+        httpGet:
+          port: 3000
+          path: /
+        failureTimeout: 120s
+        retryPeriod: 10s
+    run:
+      base: nodejs@20
+      envVariables:
+        NODE_ENV: production
+        HOSTNAME: 0.0.0.0
+        PORT: "3000"
+        API_INTERNAL_URL: http://api:4000
+        NEXT_PUBLIC_DEV_ACCESS_MODE: "true"
+        NEXT_PUBLIC_SKIP_TEMPLATES_FETCH: "true"
+        NEXT_PUBLIC_DEPLOY_PLACEHOLDER_MODE: "true"
+        NEXT_PUBLIC_CHAIN_BASE_ENABLED: "false"
+      ports:
+        - port: 3000
+          httpSupport: true
+      start: node apps/web/.next/standalone/apps/web/server.js
+
+  - setup: api
+    build:
+      base: nodejs@20
+      prepareCommands:
+        - corepack enable
+        - corepack prepare pnpm@10.15.1 --activate
+      buildCommands:
+        - pnpm install --filter api... --frozen-lockfile
+        - pnpm --filter api build
+        - pnpm --filter api deploy --prod --legacy deploy/api
+      deployFiles:
+        - deploy/api
+      cache:
+        - node_modules
+    deploy:
+      readinessCheck:
+        httpGet:
+          port: 4000
+          path: /health
+        failureTimeout: 120s
+        retryPeriod: 10s
+    run:
+      base: nodejs@20
+      envVariables:
+        NODE_ENV: production
+        HOST: 0.0.0.0
+        PORT: "4000"
+        DATA_DIR: /mnt/projectdata/blackin
+        GENERATION_PROVIDER: auto
+        GEMINI_MODEL: gemini-2.5-flash
+      ports:
+        - port: 4000
+          httpSupport: true
+      start: node --enable-source-maps deploy/api/dist/server.js

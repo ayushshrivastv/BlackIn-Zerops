@@ -1,0 +1,25 @@
+project:
+  name: blackin-studio
+  tags:
+    - zerops
+    - nextjs
+    - hackathon
+
+services:
+  - hostname: web
+    type: nodejs@20
+    enableSubdomainAccess: true
+    # Add your pushed repository URL before using this as an import file.
+    # buildFromGit: https://github.com/<your-org>/<your-repo>
+
+  - hostname: api
+    type: nodejs@20
+    enableSubdomainAccess: false
+    mount:
+      - projectdata
+    # Add GEMINI_API_KEY as an env secret in Zerops to enable real AI generation.
+    # Use the same repository URL as the web service.
+    # buildFromGit: https://github.com/<your-org>/<your-repo>
+
+  - hostname: projectdata
+    type: shared-storage:single
