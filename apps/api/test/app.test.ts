@@ -277,23 +277,20 @@ describe('generation API', () => {
             content: `
 'use client';
 import { useEffect, useRef } from 'react';
+import Phaser from 'phaser';
 
 export default function GamePage() {
   const gameHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    let game: { destroy: (removeCanvas: boolean) => void } | undefined;
-    let disposed = false;
-    void import('phaser').then(({ default: Phaser }) => {
-      if (disposed || !gameHost.current) return;
-      game = new Phaser.Game({
-        type: Phaser.AUTO,
-        width: 640,
-        height: 360,
-        parent: gameHost.current,
-        scene: { create() { this.add.text(24, 24, 'Phaser preview ready'); } },
-      });
+    if (!gameHost.current) return;
+    const game = new Phaser.Game({
+      type: Phaser.AUTO,
+      width: 640,
+      height: 360,
+      parent: gameHost.current,
+      scene: { create() { this.add.text(24, 24, 'Phaser preview ready'); } },
     });
-    return () => { disposed = true; game?.destroy(true); };
+    return () => { game.destroy(true); };
   }, []);
   return <main><div ref={gameHost} /></main>;
 }

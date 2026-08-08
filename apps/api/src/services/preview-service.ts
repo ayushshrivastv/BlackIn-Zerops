@@ -272,7 +272,7 @@ function resolveAllowedPackage(packagePath: string) {
     throw new PreviewBuildError(`Preview dependency ${packageName} is not in the controlled runtime`);
   }
   if (packagePath === 'phaser') {
-    return { path: require.resolve('phaser/dist/phaser.esm.js') };
+    return { path: require.resolve('phaser/dist/phaser.js') };
   }
   return { path: require.resolve(packagePath) };
 }
