@@ -1,33 +1,7 @@
+<p align="center"><strong style="font-size: 18px;">BlackIn</strong> <span style="font-size: 18px;">is a coding agent that runs directly in your browser.</span></p>
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/icons/blackin-wordmark-light.svg">
-    <source media="(prefers-color-scheme: light)" srcset="apps/web/public/icons/blackin-wordmark-dark.svg">
-    <img src="apps/web/public/icons/blackin-wordmark-dark.svg" alt="BlackIn" width="240">
-  </picture>
+ <img width="852" height="621" alt="browser" src="https://github.com/user-attachments/assets/90ec780d-acb7-4f8c-bdac-a01ebe12ff1e" />
 </p>
-
-<h1 align="center">BlackIn</h1>
-
-<p align="center">
-  <strong>Turn a natural-language product idea into a complete, inspectable, and runnable web application.</strong>
-</p>
-
-<p align="center">
-  Built by BlackIn Studios and powered by Zerops.
-</p>
-
-<p align="center">
-  <a href="https://blackin.club/">BlackIn.club</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://web-2ad8-3000.prg1.zerops.app/">Live Zerops Deployment</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://youtu.be/IAhL4Zv_43Y">Watch Demo</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://github.com/ayushshrivastv/BlackIn-Zerops">Source</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://docs.zerops.io/">Zerops</a>
-</p>
-
 <p align="center">
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=nextdotjs">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-20-339933?style=flat-square&logo=nodedotjs&logoColor=white">
@@ -36,15 +10,9 @@
   <a href="https://github.com/ayushshrivastv/BlackIn-Zerops/actions/workflows/deploy-zerops.yml"><img alt="Zerops deployment" src="https://github.com/ayushshrivastv/BlackIn-Zerops/actions/workflows/deploy-zerops.yml/badge.svg?branch=main"></a>
 </p>
 
-## Links
+BlackIn is a browser based coding agent. You describe what you want to build in english, and BlackIn plans the work, writes the code, and produces a complete runnable project. Powered by servers running on Zerops. Try it at: https://web-2ad8-3000.prg1.zerops.app
 
-- Website: <https://blackin.club/>
-- Live Zerops deployment: <https://web-2ad8-3000.prg1.zerops.app/>
-- Demo video: <https://youtu.be/IAhL4Zv_43Y>
-
-## Demo
-
-The [three-minute product demo](https://youtu.be/IAhL4Zv_43Y) follows the complete BlackIn workflow: entering a product request, watching the generation stages, inspecting the resulting files, verifying the live API and persistent storage inside Zerops, launching the interactive application preview, and reviewing the repository-driven deployment pipeline.
+Watch the demo: https://youtu.be/IAhL4Zv_43Y
 
 ## About
 
@@ -54,15 +22,8 @@ The workspace keeps the entire build process in one place. Generated files appea
 
 BlackIn is designed as a complete product system. The browser application, generation API, model orchestration, workspace validation, project storage, and deployment configuration are developed together in one TypeScript monorepo and operated on Zerops.
 
-## Capabilities
-
-- Generate a structured web project from one natural-language request.
-- Stream planning, implementation, file changes, validation, and completion events as they happen.
-- Inspect generated source through a project tree and integrated Monaco editor.
-- Compile and run supported generated applications in an isolated in-product preview, with an option to open the preview in a new tab.
-- Reopen persisted projects, continue refining them, synchronize edited files, and export the project as a ZIP archive.
-- Run with Gemini for agentic generation or with the deterministic provider for local development and infrastructure verification.
-- Deploy the web application, private generation API, and persistent project storage as a single Zerops-operated system.
+<p align="center">
+ <img width="852" height="621" alt="BlackIn" src="https://github.com/user-attachments/assets/a903d70a-e96d-4fad-bd11-1ac6030b6918" />
 
 ## How it works
 
