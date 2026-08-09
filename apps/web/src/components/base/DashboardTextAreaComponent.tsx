@@ -84,6 +84,9 @@ const borderGradientColors = [
 ];
 const borderAnimationSpeed = 0.4;
 const borderNoiseIntensity = 0.04;
+const examplePrompt =
+    'Build a polished Mario inspired web platformer using HTML, CSS, and JavaScript. Add running, jumping, enemies, coins, platforms, power ups, checkpoints, multiple levels, score and lives, keyboard controls, sound effects, particles, smooth animations, pause/restart screens, localStorage high scores, responsive browser layout, and clean, well organised code.';
+const exampleTypingDurationMs = 420;
 
 export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAreaComponentProps) {
     const [inputValue, setInputValue] = useState<string>('');
@@ -92,12 +95,14 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
     const [selectedModel, setSelectedModel] = useState<ModelOption>(DEFAULT_MODEL_OPTION);
     const [isTextareaFocused, setIsTextareaFocused] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [isExampleTyping, setIsExampleTyping] = useState<boolean>(false);
     const [openByokModal, setOpenByokModal] = useState(false);
     const plusButtonRef = useRef<HTMLButtonElement | null>(null);
     const plusMenuRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const attachmentsRef = useRef<AttachmentItem[]>([]);
     const submissionInFlightRef = useRef(false);
+    const exampleTypingFrameRef = useRef<number | null>(null);
 
     const { showMessageLimit, showContractLimit } = useLimitStore();
     const { set_states } = useGenerate();
@@ -111,6 +116,9 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
 
     useEffect(() => {
         return () => {
+            if (exampleTypingFrameRef.current !== null) {
+                cancelAnimationFrame(exampleTypingFrameRef.current);
+            }
             attachmentsRef.current.forEach((attachment) => {
                 if (attachment.previewUrl) {
                     URL.revokeObjectURL(attachment.previewUrl);
@@ -173,6 +181,46 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
     function handleTextareaWheel(e: WheelEvent<HTMLTextAreaElement>) {
         // Keep scroll interaction inside the input when content overflows.
         e.stopPropagation();
+    }
+
+    function stopExampleTyping() {
+        if (exampleTypingFrameRef.current !== null) {
+            cancelAnimationFrame(exampleTypingFrameRef.current);
+            exampleTypingFrameRef.current = null;
+        }
+        setIsExampleTyping(false);
+    }
+
+    function handleExamplePrompt() {
+        if (isSubmitting || isExampleTyping) return;
+
+        stopExampleTyping();
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            setInputValue(examplePrompt);
+            return;
+        }
+
+        setInputValue('');
+        setIsExampleTyping(true);
+        const startedAt = performance.now();
+
+        const typeNextChunk = (now: number) => {
+            const progress = Math.min((now - startedAt) / exampleTypingDurationMs, 1);
+            const characterCount = Math.max(1, Math.floor(progress * examplePrompt.length));
+            setInputValue(examplePrompt.slice(0, characterCount));
+
+            if (progress < 1) {
+                exampleTypingFrameRef.current = requestAnimationFrame(typeNextChunk);
+                return;
+            }
+
+            exampleTypingFrameRef.current = null;
+            setInputValue(examplePrompt);
+            setIsExampleTyping(false);
+        };
+
+        exampleTypingFrameRef.current = requestAnimationFrame(typeNextChunk);
     }
 
     function handleUploadFiles() {
@@ -307,7 +355,10 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
                             <textarea
                                 value={inputValue}
                                 ref={inputRef}
-                                onChange={(e) => setInputValue(e.target.value)}
+                                onChange={(e) => {
+                                    stopExampleTyping();
+                                    setInputValue(e.target.value);
+                                }}
                                 onFocus={() => setIsTextareaFocused(true)}
                                 onBlur={() => setIsTextareaFocused(false)}
                                 onKeyDown={handleKeyDown}
@@ -324,22 +375,42 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
                             />
                         </div>
 
-                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 pb-2.5 md:px-5 md:pb-3">
-                            <button
-                                ref={plusButtonRef}
-                                type="button"
-                                onClick={() => setShowPlusMenu((prev) => !prev)}
-                                disabled={isSubmitting}
-                                className={cn(
-                                    'inline-flex h-9 w-9 items-center justify-center rounded-full border',
-                                    'border-neutral-700 bg-[#0a0a0a] text-neutral-200 transition-colors',
-                                    showPlusMenu
-                                        ? 'border-neutral-500 bg-[#151515] text-white'
-                                        : 'hover:border-neutral-500 hover:bg-[#151515] hover:text-white',
-                                )}
-                            >
-                                <Plus className="h-4 w-4" strokeWidth={1.8} />
-                            </button>
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 pb-2.5 md:px-5 md:pb-3">
+                            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                                <button
+                                    ref={plusButtonRef}
+                                    type="button"
+                                    onClick={() => setShowPlusMenu((prev) => !prev)}
+                                    disabled={isSubmitting}
+                                    aria-label="Add an attachment"
+                                    className={cn(
+                                        'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
+                                        'border-neutral-700 bg-[#0a0a0a] text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400',
+                                        showPlusMenu
+                                            ? 'border-neutral-500 bg-[#151515] text-white'
+                                            : 'hover:border-neutral-500 hover:bg-[#151515] hover:text-white',
+                                    )}
+                                >
+                                    <Plus className="h-4 w-4" strokeWidth={1.8} />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleExamplePrompt}
+                                    disabled={isSubmitting || isExampleTyping}
+                                    aria-label="Fill in the example Mario platformer prompt"
+                                    className={cn(
+                                        'example-prompt-button group inline-flex h-9 shrink-0 items-center justify-center rounded-full px-2.5 text-[11px] font-semibold tracking-wider exec-button-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 sm:px-3 sm:text-xs',
+                                        isSubmitting || isExampleTyping
+                                            ? 'cursor-not-allowed opacity-45 hover:translate-y-0 active:scale-100'
+                                            : 'cursor-pointer transition-transform duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',
+                                    )}
+                                >
+                                    <span className="text-[#c8d0dc] transition-colors duration-150 group-hover:text-white">
+                                        Example Prompt
+                                    </span>
+                                </button>
+                            </div>
 
                             <div className="flex items-center gap-1">
                                 <Select
