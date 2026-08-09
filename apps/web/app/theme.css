@@ -229,14 +229,6 @@
         inset 0 -1px 2px rgba(0, 0, 0, 0.32);
 }
 
-.example-prompt-button.exec-button-dark {
-    background: linear-gradient(360deg, #030405 0%, #07090b 52%, #101318 100%);
-}
-
-.example-prompt-button.exec-button-dark:hover {
-    background: linear-gradient(180deg, #07090c 0%, #12171e 100%);
-}
-
 .exec-button-light {
     background: linear-gradient(360deg, #f7f8fa 0%, #f7f8fa 50%, #fff 100%);
     color: #4a4a4b;

@@ -400,7 +400,7 @@ export default function DashboardTextAreaComponent({ inputRef }: DashboardTextAr
                                     disabled={isSubmitting || isExampleTyping}
                                     aria-label="Fill in the example Mario platformer prompt"
                                     className={cn(
-                                        'example-prompt-button group inline-flex h-9 shrink-0 items-center justify-center rounded-full px-2.5 text-[11px] font-semibold tracking-wider exec-button-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 sm:px-3 sm:text-xs',
+                                        'group inline-flex h-9 shrink-0 items-center justify-center rounded-full px-2.5 text-[11px] font-semibold tracking-wider exec-button-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 sm:px-3 sm:text-xs',
                                         isSubmitting || isExampleTyping
                                             ? 'cursor-not-allowed opacity-45 hover:translate-y-0 active:scale-100'
                                             : 'cursor-pointer transition-transform duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',

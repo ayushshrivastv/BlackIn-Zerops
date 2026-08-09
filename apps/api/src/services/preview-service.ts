@@ -57,6 +57,7 @@ export class PreviewService {
     projectId: string,
     files: ProjectFile[],
     exampleProject: PreviewExampleProject | null = null,
+    projectName?: string,
   ): Promise<ProjectPreviewState> {
     const now = new Date().toISOString();
     this.previews.set(projectId, {
@@ -70,7 +71,7 @@ export class PreviewService {
     });
 
     try {
-      const html = await enqueuePreviewCompile(files, exampleProject);
+      const html = await enqueuePreviewCompile(files, exampleProject, projectName);
       const ready: StoredPreview = {
         projectId,
         status: 'ready',
@@ -103,9 +104,15 @@ export class PreviewService {
   }
 }
 
-function enqueuePreviewCompile(files: ProjectFile[], exampleProject: PreviewExampleProject | null): Promise<string> {
+function enqueuePreviewCompile(
+  files: ProjectFile[],
+  exampleProject: PreviewExampleProject | null,
+  projectName?: string,
+): Promise<string> {
   const compilation = previewBuildQueue.then(() =>
-    exampleProject ? compileExampleProjectPreview(exampleProject) : compileProjectPreview(files),
+    exampleProject
+      ? compileExampleProjectPreview(exampleProject, projectName ?? exampleProject.sourceName)
+      : compileProjectPreview(files),
   );
   previewBuildQueue = compilation.then(
     () => undefined,
@@ -114,7 +121,7 @@ function enqueuePreviewCompile(files: ProjectFile[], exampleProject: PreviewExam
   return compilation;
 }
 
-async function compileExampleProjectPreview(exampleProject: PreviewExampleProject): Promise<string> {
+async function compileExampleProjectPreview(exampleProject: PreviewExampleProject, projectName: string): Promise<string> {
   const filePaths = [exampleProject.entryFile, ...exampleProject.stylesheets, ...exampleProject.scripts];
   const sourceEntries = await Promise.all(
     filePaths.map(async (filePath) => [filePath, await readExampleFile(exampleProject, filePath)] as const),
@@ -129,6 +136,7 @@ async function compileExampleProjectPreview(exampleProject: PreviewExampleProjec
   if (!document) {
     throw new PreviewBuildError('The preview source is missing its entry document');
   }
+  document = replaceExampleProjectName(document, exampleProject.sourceName, projectName);
 
   for (const stylesheet of exampleProject.stylesheets) {
     const source = sources.get(stylesheet);
@@ -156,6 +164,11 @@ async function compileExampleProjectPreview(exampleProject: PreviewExampleProjec
   }
 
   return document;
+}
+
+function replaceExampleProjectName(document: string, sourceName: string, projectName: string): string {
+  const safeProjectName = escapeHtml(projectName.trim() || sourceName);
+  return document.replaceAll(sourceName, () => safeProjectName);
 }
 
 async function readExampleFile(exampleProject: PreviewExampleProject, relativePath: string): Promise<string> {

@@ -207,6 +207,7 @@ describe('generation API', () => {
 
   it('runs normal generation before using the exact-prompt preview example', async () => {
     const projectId = 'brickbound-example-preview';
+    const generatedTitle = 'Polished Mario Inspired Web';
     const generation = await app.inject({
       method: 'POST',
       url: '/api/v1/generate',
@@ -226,7 +227,7 @@ describe('generation API', () => {
     expect(events.some((event) => event.type === 'EDITING_FILE')).toBe(true);
     expect(events.some((event) => event.type === 'FINALIZING')).toBe(true);
     expect(events.at(-1)?.type).toBe('END');
-    expect(generation.body).toContain('Brickbound is complete');
+    expect(generation.body).toContain(`${generatedTitle} is complete`);
 
     const project = await app.inject({
       method: 'GET',
@@ -234,9 +235,9 @@ describe('generation API', () => {
     });
     expect(project.statusCode).toBe(200);
     expect(project.json<{ data: { title: string; messages: Array<{ content: string }> } }>().data).toMatchObject({
-      title: 'Brickbound',
+      title: generatedTitle,
       messages: expect.arrayContaining([
-        expect.objectContaining({ content: expect.stringContaining('Brickbound is complete') }),
+        expect.objectContaining({ content: expect.stringContaining(`${generatedTitle} is complete`) }),
       ]),
     });
 
@@ -251,12 +252,13 @@ describe('generation API', () => {
       url: `/api/v1/previews/${projectId}`,
     });
     expect(preview.statusCode).toBe(200);
-    expect(preview.body).toContain('<title>Brickbound');
-    expect(preview.body).toContain('aria-label="Brickbound game canvas"');
+    expect(preview.body).toContain(`<title>${generatedTitle}`);
+    expect(preview.body).toContain(`aria-label="${generatedTitle} game canvas"`);
     expect(preview.body).toContain('const LEVELS = [');
     expect(preview.body).toContain('--bg: #eef8ff');
     expect(preview.body).not.toContain('href="styles.css"');
     expect(preview.body).not.toContain('src="game.js"');
+    expect(preview.body).not.toContain('Brickbound');
   });
 
   it('keeps near-matching prompts on the generated preview path', async () => {

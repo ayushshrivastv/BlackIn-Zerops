@@ -1,6 +1,6 @@
 import type { ProjectGenerator, ProjectRecord, StreamEvent } from '../types.js';
 import { createMessage, createStreamEvent } from '../lib/messages.js';
-import { matchPreviewExample } from '../preview/example-projects.js';
+import { createPreviewExampleSummary, matchPreviewExample } from '../preview/example-projects.js';
 import { ProjectStore } from '../storage/project-store.js';
 
 export type StreamEventWriter = (event: StreamEvent) => Promise<void> | void;
@@ -107,8 +107,10 @@ export class GenerationService {
       await this.writeStage(projectId, 'FINALIZING', 'Preparing the final project handoff', writeEvent);
 
       const exampleProject = matchPreviewExample(instruction);
-      const finalTitle = exampleProject?.projectName ?? generated.title;
-      const finalSummary = exampleProject?.finalSummary ?? generated.summary;
+      const finalTitle = exampleProject
+        ? normalizeGeneratedTitle(generated.title, exampleProject.sourceName)
+        : generated.title;
+      const finalSummary = exampleProject ? createPreviewExampleSummary(exampleProject, finalTitle) : generated.summary;
       const finalMessage = createMessage(projectId, 'AI', finalSummary, 'END');
       project.title = finalTitle;
       project.description = generated.description;
@@ -144,4 +146,8 @@ export class GenerationService {
     const message = createMessage(projectId, 'SYSTEM', content, stage);
     await writeEvent(createStreamEvent(stage, { stage }, message));
   }
+}
+
+function normalizeGeneratedTitle(title: string, fallback: string): string {
+  return title.trim().replace(/\s+/g, ' ').slice(0, 100) || fallback;
 }

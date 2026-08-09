@@ -225,6 +225,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       projectId,
       project.files,
       matchPreviewExample(project.prompt),
+      project.title,
     );
     return {
       success: true,
