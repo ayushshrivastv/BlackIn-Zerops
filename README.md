@@ -35,6 +35,10 @@ The workspace preview action sends a completed project to the API preview compil
 
 When `GEMINI_API_KEY` is configured, BlackIn uses Google Gemini for model-backed project generation. Without a key, it selects the built-in deterministic generator so the full product workflow remains available for local development, testing, and deployment verification.
 
+<p align="center">
+<img width="852" height="621" alt="Screenshot 2026-08-09 at 13 24 00" src="https://github.com/user-attachments/assets/6d43b067-9a64-4777-9ed9-2ba0b2919286" />
+
+
 ## Platform
 
 BlackIn combines a Next.js application with a Fastify generation service. Next.js provides the product experience, project workspace, server-side API gateway, and production application artifact. Fastify provides request validation, generation streams, WebSocket events, project lifecycle operations, file synchronization, persistence, and archive creation.
